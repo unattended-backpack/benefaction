@@ -12,9 +12,9 @@
 
 # Allow environment variable overrides with defaults.
 export FOUNDRY_DISABLE_NIGHTLY_WARNING ?= 1
-PRIVATE_KEY ?=
-MNEMONIC ?= "faith faith faith faith faith faith faith grace grace grace grace grace"
-MNEMONIC_INDEX ?= 0
+export PRIVATE_KEY ?=
+export MNEMONIC ?= "faith faith faith faith faith faith faith grace grace grace grace grace"
+export MNEMONIC_INDEX ?= 0
 RPC_URL ?= http://rpc.sacristy.local
 VERIFIER ?= blockscout
 VERIFIER_URL ?= http://api.blockscout.sacristy.local/api/
