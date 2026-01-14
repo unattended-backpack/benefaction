@@ -17,7 +17,7 @@ import { Script } from "forge-std/Script.sol";
 
   @custom:date January 13th, 2026.
 */
-contract DeployTest20 is
+contract SubmitBid is
   Script {
 
   /// The address of the CCA contract.
@@ -25,15 +25,26 @@ contract DeployTest20 is
 
   /// Run the script.
   function run () external {
-    vm.startBroadcast();
+
+    // Retrieve the bid submitter based on the configured signer.
+    uint256 _privateKey = vm.envOr("PRIVATE_KEY", uint256(0));
+    if (_privateKey == 0) {
+      string memory _mnemonic = vm.envString("MNEMONIC");
+      uint32 _index = uint32(vm.envUint("MNEMONIC_INDEX"));
+      _privateKey = vm.deriveKey(_mnemonic, _index);
+    }
+    address _signer = vm.addr(_privateKey);
+
+    // Submit a bid.
+    vm.startBroadcast(_privateKey);
     IContinuousClearingAuction _auction = IContinuousClearingAuction(AUCTION);
-    uint256 _maxBidPrice =
-      _auction.floorPrice() + (1 * _auction.tickSpacing());
+    uint256 _maxBidPrice = _auction.floorPrice() + _auction.tickSpacing();
     uint256 _bidId =
       _auction.submitBid{ value: 1 ether }(
-        _maxBidPrice, 1 ether, msg.sender, bytes("")
+        _maxBidPrice, 1 ether, _signer, bytes("")
       );
     console2.log("Bid submitted with ID:", _bidId);
+    console2.log("Signer:", _signer);
     vm.stopBroadcast();
   }
 }

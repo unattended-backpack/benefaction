@@ -63,11 +63,13 @@ test:
 	@echo "... tests completed."
 
 # Common deploy-and-verify logic. Requires CONTRACT to be set.
+# CONTRACT_PATH defaults to src/$(CONTRACT).sol but can be overridden.
 .PHONY: deploy-and-verify
 deploy-and-verify:
 ifndef CONTRACT
 	$(error CONTRACT is required. Use a contract-specific target like deploy-factory.)
 endif
+	$(eval CONTRACT_PATH ?= src/$(CONTRACT).sol)
 	@echo "* Deploying $(CONTRACT) ..."
 	@cd ./contracts && \
 		OUTPUT=$$(forge script script/deploy/Deploy$(CONTRACT).s.sol --rpc-url $(RPC_URL) $(WALLET_ARGS) --broadcast 2>&1); \
@@ -76,7 +78,7 @@ endif
 		if [ $$STATUS -ne 0 ]; then exit $$STATUS; fi && \
 		ADDRESS=$$(echo "$$OUTPUT" | grep -oP '$(CONTRACT) \K0x[a-fA-F0-9]+') && \
 		echo "* Verifying at $$ADDRESS ..." && \
-		forge verify-contract $$ADDRESS src/$(CONTRACT).sol:$(CONTRACT) --verifier $(VERIFIER) --verifier-url $(VERIFIER_URL)
+		forge verify-contract $$ADDRESS $(CONTRACT_PATH):$(CONTRACT) --verifier $(VERIFIER) --verifier-url $(VERIFIER_URL)
 	@echo "* ... deployed and verified."
 
 .PHONY: deploy-factory
@@ -87,9 +89,13 @@ deploy-factory:
 deploy-cca:
 	@$(MAKE) deploy-and-verify CONTRACT=ContinuousClearingAuction
 
+.PHONY: deploy-lens
+deploy-lens:
+	@$(MAKE) deploy-and-verify CONTRACT=AuctionStateLens CONTRACT_PATH=src/lens/AuctionStateLens.sol
+
 .PHONY: deploy-token
 deploy-token:
-	@$(MAKE) deploy-and-verify CONTRACT=Test20
+	@$(MAKE) deploy-and-verify CONTRACT=Test20 CONTRACT_PATH=src/erc20/Test20.sol
 
 .PHONY: prepare-cca
 prepare-cca:
