@@ -1,0 +1,8 @@
+@openzeppelin-contracts-5.6.0-rc.0/=dependencies/@openzeppelin-contracts-5.6.0-rc.0/
+@openzeppelin-contracts-upgradeable-5.6.0-rc.0/=dependencies/@openzeppelin-contracts-upgradeable-5.6.0-rc.0/
+forge-gas-snapshot-0.0.4/=dependencies/forge-gas-snapshot-0.0.4/
+forge-std-1.14.0/=dependencies/forge-std-1.14.0/
+solady-0.1.26/=dependencies/solady-0.1.26/
+uniswap-permit2-unlocked-1.0.0/=dependencies/uniswap-permit2-unlocked-1.0.0/
+uniswap-v4-core-4/=dependencies/uniswap-v4-core-4/
+uniswap-v4-periphery-3779387e5d296f39df543d23524b050f89a62917/=dependencies/uniswap-v4-periphery-3779387e5d296f39df543d23524b050f89a62917/
