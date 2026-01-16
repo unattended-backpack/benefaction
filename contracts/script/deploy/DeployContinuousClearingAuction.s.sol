@@ -5,8 +5,13 @@ import { ContinuousClearingAuction } from
   "../../src/ContinuousClearingAuction.sol";
 import { AuctionParameters } from
   "../../src/interfaces/IContinuousClearingAuction.sol";
-import { console2 } from "forge-std/console2.sol";
-import { Script } from "forge-std/Script.sol";
+import { WithCreateX } from "./WithCreateX.s.sol";
+
+/// This error is thrown when the auction steps arrays have mismatched lengths.
+error AuctionStepsLengthMismatch (
+  uint256 mpsLength,
+  uint256 blocksLength
+);
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -19,47 +24,70 @@ import { Script } from "forge-std/Script.sol";
   @custom:date January 13th, 2026.
 */
 contract DeployContinuousClearingAuction is
-  Script {
+  WithCreateX {
 
-  /// The address of the token being sold in the auction.
-  address constant TOKEN = 0x78E11d99b8f50C85b72bd4387a7D8f28C0CAbf2D;
+  /**
+    Pack auction steps from parallel MPS and block delta arrays.
 
-  /// The total supply of the token being sold in the auction.
-  uint128 constant AUCTION_SUPPLY = 500_000000_000000000000000000;
+    @param _mpsValues The MPS (millipercent of supply) values for each step.
+    @param _blockDeltas The block delta values for each step.
+
+    @return _auctionSteps The packed auction steps data.
+  */
+  function _packAuctionSteps (
+    uint256[] memory _mpsValues,
+    uint256[] memory _blockDeltas
+  ) internal pure returns (bytes memory _auctionSteps) {
+    if (_mpsValues.length != _blockDeltas.length) {
+      revert AuctionStepsLengthMismatch(_mpsValues.length, _blockDeltas.length);
+    }
+    for (uint256 i = 0; i < _mpsValues.length; i++) {
+      _auctionSteps = abi.encodePacked(
+        _auctionSteps,
+        uint24(_mpsValues[i]),
+        uint40(_blockDeltas[i])
+      );
+    }
+  }
 
   /// Run the deploy script.
   function run () external {
 
+    // Load auction configuration from environment.
+    address _token = vm.envAddress("CCA_TOKEN");
+    uint128 _auctionSupply = uint128(vm.envUint("CCA_AUCTION_SUPPLY"));
+
+    // Load and pack auction steps from environment.
+    uint256[] memory _mpsValues = vm.envUint("CCA_AUCTION_STEPS_MPS", ",");
+    uint256[] memory _blockDeltas = vm.envUint("CCA_AUCTION_STEPS_BLOCKS", ",");
+    bytes memory _auctionSteps = _packAuctionSteps(_mpsValues, _blockDeltas);
+
     // Prepare the auction parameters.
-    // Each step is packed as: abi.encodePacked(uint24 mps, uint40 blockDelta)
-    // Constraint: sum(mps * blockDelta) must equal 1e7
-    bytes memory _auctionSteps = abi.encodePacked(
-      uint24(333), uint40(300),       // 333 * 300 = 99,900
-      uint24(3297), uint40(2699),     // 3297 * 2699 = 8,898,603
-      uint24(1001497), uint40(1)      // 1001497 * 1 = 1,001,497  (total: 10,000,000)
-    );
     AuctionParameters memory _parameters = AuctionParameters({
-      currency: 0x0000000000000000000000000000000000000000,
-      tokensRecipient: TOKEN,
-      fundsRecipient: TOKEN,
-      startBlock: 300,
-      endBlock: 3300,
-      claimBlock: 6000,
-      tickSpacing: 7937103036892840872925,
-      validationHook: 0x0000000000000000000000000000000000000000,
-      floorPrice: 79371030368928408729250,
-      requiredCurrencyRaised: 10_000000000000000000,
+      currency: vm.envAddress("CCA_CURRENCY"),
+      tokensRecipient: vm.envAddress("CCA_TOKENS_RECIPIENT"),
+      fundsRecipient: vm.envAddress("CCA_FUNDS_RECIPIENT"),
+      startBlock: uint64(vm.envUint("CCA_START_BLOCK")),
+      endBlock: uint64(vm.envUint("CCA_END_BLOCK")),
+      claimBlock: uint64(vm.envUint("CCA_CLAIM_BLOCK")),
+      tickSpacing: vm.envUint("CCA_TICK_SPACING"),
+      validationHook: vm.envAddress("CCA_VALIDATION_HOOK"),
+      floorPrice: vm.envUint("CCA_FLOOR_PRICE"),
+      requiredCurrencyRaised: uint128(vm.envUint("CCA_REQUIRED_CURRENCY_RAISED")),
       auctionStepsData: _auctionSteps
     });
 
-    // Create the CCA.
-    vm.startBroadcast();
-    ContinuousClearingAuction _auction =
-      new ContinuousClearingAuction(TOKEN, AUCTION_SUPPLY, _parameters);
-    vm.stopBroadcast();
-
-    // Log the deployed addresses for Makefile parsing.
-    console2.log("ContinuousClearingAuction", address(_auction));
+    // Deploy the auction.
+    Deployment[] memory _deployments = new Deployment[](1);
+    _deployments[0] = Deployment({
+      salt: vm.envBytes32("CCA_SALT"),
+      expectedAddress: vm.envAddress("CCA_EXPECTED_ADDRESS"),
+      contractName: "ContinuousClearingAuction",
+      initCode: abi.encodePacked(
+        type(ContinuousClearingAuction).creationCode,
+        abi.encode(_token, _auctionSupply, _parameters)
+      )
+    });
+    deploy(_deployments);
   }
 }
-

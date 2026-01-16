@@ -10,11 +10,14 @@
 # Load configuration from `.env` if it exists.
 -include .env
 
+# Export all variables to child processes (e.g., forge scripts).
+.EXPORT_ALL_VARIABLES:
+
 # Allow environment variable overrides with defaults.
-export FOUNDRY_DISABLE_NIGHTLY_WARNING ?= 1
-export PRIVATE_KEY ?=
-export MNEMONIC ?= "faith faith faith faith faith faith faith grace grace grace grace grace"
-export MNEMONIC_INDEX ?= 0
+FOUNDRY_DISABLE_NIGHTLY_WARNING ?= 1
+PRIVATE_KEY ?=
+MNEMONIC ?= "faith faith faith faith faith faith faith grace grace grace grace grace"
+MNEMONIC_INDEX ?= 0
 RPC_URL ?= http://rpc.sacristy.local
 VERIFIER ?= blockscout
 VERIFIER_URL ?= http://api.blockscout.sacristy.local/api/
@@ -53,7 +56,7 @@ clean:
 .PHONY: build
 build:
 	@echo "Building ..."
-	cd ./contracts && forge build && cd ../
+	cd ./contracts && forge soldeer install && forge build && cd ../
 	@echo "... build complete."
 
 .PHONY: test
@@ -85,6 +88,10 @@ endif
 deploy-factory:
 	@$(MAKE) deploy-and-verify CONTRACT=ContinuousClearingAuctionFactory
 
+.PHONY: deploy-token
+deploy-token:
+	@$(MAKE) deploy-and-verify CONTRACT=Test20 CONTRACT_PATH=src/erc20/Test20.sol
+
 .PHONY: deploy-cca
 deploy-cca:
 	@$(MAKE) deploy-and-verify CONTRACT=ContinuousClearingAuction
@@ -93,13 +100,17 @@ deploy-cca:
 deploy-lens:
 	@$(MAKE) deploy-and-verify CONTRACT=AuctionStateLens CONTRACT_PATH=src/lens/AuctionStateLens.sol
 
-.PHONY: deploy-token
-deploy-token:
-	@$(MAKE) deploy-and-verify CONTRACT=Test20 CONTRACT_PATH=src/erc20/Test20.sol
-
 .PHONY: prepare-cca
 prepare-cca:
 	cd ./contracts && forge script script/deploy/PrepareCCA.s.sol --rpc-url $(RPC_URL) $(WALLET_ARGS) --broadcast && cd ../
+
+.PHONY: deploy
+deploy:
+	$(MAKE) build
+	$(MAKE) deploy-token
+	$(MAKE) deploy-cca
+	$(MAKE) deploy-lens
+	$(MAKE) prepare-cca
 
 .PHONY: submit-bid
 submit-bid:
@@ -116,6 +127,12 @@ help:
 	@echo "  test              Run all tests."
 	@echo "  deploy-and-verify Deploy and verify a particular contract."
 	@echo "  deploy-factory    Deploy the ContinuousClearingAuctionFactory."
+	@echo "  deploy-token      Deploy the token."
+	@echo "  deploy-cca        Deploy the ContinuousClearingAuction."
+	@echo "  deploy-lens       Deploy the AuctionStateLens."
+	@echo "  prepare-cca       Prepare the CCA contract for auction start."
+	@echo "  deploy            Deploy and prepare all required contracts."
+	@echo "  submit-bid        Submit a bid to the CCA contract."
 	@echo "  help              Show this help message."
 	@echo ""
 	@echo "Configuration:"

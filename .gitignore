@@ -5,6 +5,7 @@
 out/
 cache/
 dependencies/
+broadcast/
 
 # Editor artifacts.
 .claude/

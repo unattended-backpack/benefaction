@@ -3,8 +3,7 @@ pragma solidity ^0.8.0;
 
 import { ContinuousClearingAuctionFactory } from
   "../../src/ContinuousClearingAuctionFactory.sol";
-import { console2 } from "forge-std/console2.sol";
-import { Script } from "forge-std/Script.sol";
+import { WithCreateX } from "./WithCreateX.s.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -17,17 +16,20 @@ import { Script } from "forge-std/Script.sol";
   @custom:date January 13th, 2026.
 */
 contract DeployContinuousClearingAuctionFactory is
-  Script {
+  WithCreateX {
 
   /// Run the deploy script.
   function run () external {
-    vm.startBroadcast();
-    ContinuousClearingAuctionFactory _factory =
-      new ContinuousClearingAuctionFactory();
-    vm.stopBroadcast();
+    bytes32 _salt = vm.envBytes32("FACTORY_SALT");
+    address _expectedAddress = vm.envAddress("FACTORY_EXPECTED_ADDRESS");
 
-    // Log the deployed addresses for Makefile parsing.
-    console2.log("ContinuousClearingAuctionFactory", address(_factory));
+    Deployment[] memory _deployments = new Deployment[](1);
+    _deployments[0] = Deployment({
+      salt: _salt,
+      expectedAddress: _expectedAddress,
+      contractName: "ContinuousClearingAuctionFactory",
+      initCode: type(ContinuousClearingAuctionFactory).creationCode
+    });
+    deploy(_deployments);
   }
 }
-

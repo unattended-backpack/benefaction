@@ -6,7 +6,7 @@ We began Sigil and are proud of the work we have performed to finish it. We woul
 
 ## Building Contracts
 
-The contents of [`contracts`](./contracts/) are a standard `forge` project. We have helper goals in the [Makefile](./Makefile) for building and deploying. To build the contracts, simply `make build`. To test, simply `make test`. Refer to specific deployment scripts for more information; configuration is performed directly in the file.
+The contents of [`contracts`](./contracts/) are a standard `forge` project. We have helper goals in the [Makefile](./Makefile) for building and deploying. To build the contracts, simply `make build`. To test, simply `make test`. Refer to specific deployment scripts for more information. Most of the deployment scripts and other helpers consume environment variables for configuration, but some configuration is performed directly in each script depending on the operation.
 
 # Security
 

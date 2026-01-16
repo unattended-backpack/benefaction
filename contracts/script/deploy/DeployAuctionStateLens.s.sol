@@ -2,8 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { AuctionStateLens } from "../../src/lens/AuctionStateLens.sol";
-import { console2 } from "forge-std/console2.sol";
-import { Script } from "forge-std/Script.sol";
+import { WithCreateX } from "./WithCreateX.s.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -16,16 +15,20 @@ import { Script } from "forge-std/Script.sol";
   @custom:date January 14th, 2026.
 */
 contract DeployAuctionStateLens is
-  Script {
+  WithCreateX {
 
   /// Run the deploy script.
   function run () external {
-    vm.startBroadcast();
-    AuctionStateLens _lens = new AuctionStateLens();
-    vm.stopBroadcast();
+    bytes32 _salt = vm.envBytes32("LENS_SALT");
+    address _expectedAddress = vm.envAddress("LENS_EXPECTED_ADDRESS");
 
-    // Log the deployed addresses for Makefile parsing.
-    console2.log("AuctionStateLens", address(_lens));
+    Deployment[] memory _deployments = new Deployment[](1);
+    _deployments[0] = Deployment({
+      salt: _salt,
+      expectedAddress: _expectedAddress,
+      contractName: "AuctionStateLens",
+      initCode: type(AuctionStateLens).creationCode
+    });
+    deploy(_deployments);
   }
 }
-

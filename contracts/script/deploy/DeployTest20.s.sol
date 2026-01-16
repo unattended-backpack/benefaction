@@ -2,8 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { Test20 } from "../../src/erc20/Test20.sol";
-import { console2 } from "forge-std/console2.sol";
-import { Script } from "forge-std/Script.sol";
+import { WithCreateX } from "./WithCreateX.s.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -16,16 +15,20 @@ import { Script } from "forge-std/Script.sol";
   @custom:date January 13th, 2026.
 */
 contract DeployTest20 is
-  Script {
+  WithCreateX {
 
   /// Run the deploy script.
   function run () external {
-    vm.startBroadcast();
-    Test20 _token = new Test20();
-    vm.stopBroadcast();
+    bytes32 _salt = vm.envBytes32("TOKEN_SALT");
+    address _expectedAddress = vm.envAddress("TOKEN_EXPECTED_ADDRESS");
 
-    // Log the deployed addresses for Makefile parsing.
-    console2.log("Test20", address(_token));
+    Deployment[] memory _deployments = new Deployment[](1);
+    _deployments[0] = Deployment({
+      salt: _salt,
+      expectedAddress: _expectedAddress,
+      contractName: "Test20",
+      initCode: type(Test20).creationCode
+    });
+    deploy(_deployments);
   }
 }
-
