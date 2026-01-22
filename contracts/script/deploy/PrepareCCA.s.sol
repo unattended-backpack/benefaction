@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import { ITest20 } from "../../src/erc20/interfaces/ITest20.sol";
+import { ISigil } from "token/interfaces/ISigil.sol";
 import { IContinuousClearingAuction } from
-  "../../src/interfaces/IContinuousClearingAuction.sol";
-import { WithSigner } from "./WithSigner.s.sol";
+  "cca/interfaces/IContinuousClearingAuction.sol";
+import { WithSigner } from "../util/WithSigner.sol";
 import { console2 } from "forge-std/console2.sol";
 
 /**
@@ -27,7 +27,7 @@ contract PrepareCCA is
     uint128 _auctionSupply = uint128(vm.envUint("CCA_AUCTION_SUPPLY"));
 
     // Send tokens to the auction.
-    ITest20 _token = ITest20(_tokenAddress);
+    ISigil _token = ISigil(_tokenAddress);
     IContinuousClearingAuction _auction =
       IContinuousClearingAuction(_auctionAddress);
     _token.mint(_auctionAddress, _auctionSupply);

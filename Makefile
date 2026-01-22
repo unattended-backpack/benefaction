@@ -65,12 +65,24 @@ test:
 	cd ./contracts && forge test && cd ../
 	@echo "... tests completed."
 
+.PHONY: test-cca
+test-cca:
+	@echo "Running CCA tests ..."
+	cd ./contracts && forge test --match-path "test/cca/*" && cd ../
+	@echo "... CCA tests completed."
+
+.PHONY: test-token
+test-token:
+	@echo "Running token tests ..."
+	cd ./contracts && forge test --match-path "test/token/*" && cd ../
+	@echo "... token tests completed."
+
 # Common deploy-and-verify logic. Requires CONTRACT to be set.
 # CONTRACT_PATH defaults to src/$(CONTRACT).sol but can be overridden.
 .PHONY: deploy-and-verify
 deploy-and-verify:
 ifndef CONTRACT
-	$(error CONTRACT is required. Use a contract-specific target like deploy-factory.)
+	$(error CONTRACT is required. Use a contract-specific target like deploy-sigil.)
 endif
 	$(eval CONTRACT_PATH ?= src/$(CONTRACT).sol)
 	@echo "* Deploying $(CONTRACT) ..."
@@ -84,21 +96,17 @@ endif
 		forge verify-contract $$ADDRESS $(CONTRACT_PATH):$(CONTRACT) --verifier $(VERIFIER) --verifier-url $(VERIFIER_URL)
 	@echo "* ... deployed and verified."
 
-.PHONY: deploy-factory
-deploy-factory:
-	@$(MAKE) deploy-and-verify CONTRACT=ContinuousClearingAuctionFactory
-
-.PHONY: deploy-token
-deploy-token:
-	@$(MAKE) deploy-and-verify CONTRACT=Test20 CONTRACT_PATH=src/erc20/Test20.sol
+.PHONY: deploy-sigil
+deploy-sigil:
+	@$(MAKE) deploy-and-verify CONTRACT=Sigil CONTRACT_PATH=src/token/Sigil.sol
 
 .PHONY: deploy-cca
 deploy-cca:
-	@$(MAKE) deploy-and-verify CONTRACT=ContinuousClearingAuction
+	@$(MAKE) deploy-and-verify CONTRACT=ContinuousClearingAuction CONTRACT_PATH=src/cca/ContinuousClearingAuction.sol
 
 .PHONY: deploy-lens
 deploy-lens:
-	@$(MAKE) deploy-and-verify CONTRACT=AuctionStateLens CONTRACT_PATH=src/lens/AuctionStateLens.sol
+	@$(MAKE) deploy-and-verify CONTRACT=AuctionStateLens CONTRACT_PATH=src/cca/lens/AuctionStateLens.sol
 
 .PHONY: prepare-cca
 prepare-cca:
@@ -107,14 +115,14 @@ prepare-cca:
 .PHONY: deploy
 deploy:
 	$(MAKE) build
-	$(MAKE) deploy-token
+	$(MAKE) deploy-sigil
 	$(MAKE) deploy-cca
 	$(MAKE) deploy-lens
 	$(MAKE) prepare-cca
 
 .PHONY: submit-bid
 submit-bid:
-	cd ./contracts && forge script script/deploy/SubmitBid.s.sol --rpc-url $(RPC_URL) $(WALLET_ARGS) --broadcast && cd ../
+	cd ./contracts && forge script script/SubmitBid.s.sol --rpc-url $(RPC_URL) $(WALLET_ARGS) --broadcast && cd ../
 
 .PHONY: help
 help:
@@ -125,9 +133,10 @@ help:
 	@echo "  clean             Clean output directories."
 	@echo "  build             Build contracts."
 	@echo "  test              Run all tests."
+	@echo "  test-cca          Run CCA tests only."
+	@echo "  test-token        Run token tests only."
 	@echo "  deploy-and-verify Deploy and verify a particular contract."
-	@echo "  deploy-factory    Deploy the ContinuousClearingAuctionFactory."
-	@echo "  deploy-token      Deploy the token."
+	@echo "  deploy-sigil      Deploy the Sigil token."
 	@echo "  deploy-cca        Deploy the ContinuousClearingAuction."
 	@echo "  deploy-lens       Deploy the AuctionStateLens."
 	@echo "  prepare-cca       Prepare the CCA contract for auction start."
@@ -147,6 +156,6 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make build"
-	@echo "  make deploy-factory"
+	@echo "  make deploy"
 
 .DEFAULT_GOAL := build

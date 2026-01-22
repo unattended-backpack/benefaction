@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import { ContinuousClearingAuction } from
-  "../../src/ContinuousClearingAuction.sol";
+  "cca/ContinuousClearingAuction.sol";
 import { AuctionParameters } from
-  "../../src/interfaces/IContinuousClearingAuction.sol";
-import { WithCreateX } from "./WithCreateX.s.sol";
+  "cca/interfaces/IContinuousClearingAuction.sol";
+import { WithCreateX } from "../util/WithCreateX.sol";
 
 /// This error is thrown when the auction steps arrays have mismatched lengths.
 error AuctionStepsLengthMismatch (

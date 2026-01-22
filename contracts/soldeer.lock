@@ -6,20 +6,6 @@ checksum = "dd1eb55bff21e54c440a65d3a36c023881791aec1b38336203a4e684338b3f65"
 integrity = "3fbb57e3b4101e8aecdfab5745089395cb97075a53196d61e567ed4feead4e7e"
 
 [[dependencies]]
-name = "@openzeppelin-contracts-upgradeable"
-version = "5.6.0-rc.0"
-url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts-upgradeable/5_6_0-rc_0_19-12-2025_15:44:01_contracts-upgradeable.zip"
-checksum = "5c9aca87efee0aecae07d2b31b40d6b7896606963fdcfb7b5655b2a9b856fba8"
-integrity = "aaeaba4bd65b004dbd98aeaab5088cd8725dbeb630b1ef98c6cb950412119dcb"
-
-[[dependencies]]
-name = "forge-gas-snapshot"
-version = "0.0.4"
-url = "https://soldeer-revisions.s3.amazonaws.com/forge-gas-snapshot/0_0_4_09-09-2024_15:16:41_forge-gas-snapshot.zip"
-checksum = "85805b7d655863ac8f6d85a96118c77c3d5ad4d5aa7a9cd5cfc01a88120c9301"
-integrity = "216f09008a8ca9bb9ae4461e51454208f50fefc59a66dcc5c060ffd242fce434"
-
-[[dependencies]]
 name = "forge-std"
 version = "1.14.0"
 url = "https://soldeer-revisions.s3.amazonaws.com/forge-std/1_14_0_05-01-2026_15:24:39_forge-std-1.14.zip"
@@ -32,24 +18,3 @@ version = "0.1.26"
 url = "https://soldeer-revisions.s3.amazonaws.com/solady/0_1_26_25-08-2025_15:30:06_solady.zip"
 checksum = "9872ac7cfd32c1eba32800508a1325c49f4a4aa8c6f670454db91971a583e26b"
 integrity = "5da4b5ca9cbad98812a4b75ad528ff34c72a0b84433204be6d1420c81de1d6ff"
-
-[[dependencies]]
-name = "uniswap-permit2-unlocked"
-version = "1.0.0"
-url = "https://soldeer-revisions.s3.amazonaws.com/uniswap-permit2-unlocked/1_0_0_02-04-2025_20:04:54_permit2.zip"
-checksum = "552c003c8eaecebd30235e525934463f5741d81d9e39d77f997d44ba8bddcde6"
-integrity = "f091bf10500375f7dfe217f6102332eafd7c66752aa8e1dd16760049de3434fa"
-
-[[dependencies]]
-name = "uniswap-v4-core"
-version = "4"
-url = "https://soldeer-revisions.s3.amazonaws.com/uniswap-v4-core/4_28-02-2025_23:27:23_uniswap-v4-core-4.zip"
-checksum = "cd91c1b34ad73028bddaeb9fd676a957962f7e4ab671998f4439aa1f474010c8"
-integrity = "859f1409f40b591e2cf337d02591d4ec53013631d2e958a9f03b84af88410abb"
-
-[[dependencies]]
-name = "uniswap-v4-periphery"
-version = "3779387e5d296f39df543d23524b050f89a62917"
-url = "https://soldeer-revisions.s3.amazonaws.com/uniswap-v4-periphery/3779387e5d296f39df543d23524b050f89a62917_06-11-2025_10:22:08_uniswap-v4-periphery-3779387e5d296f39df543d23524b050f89a62917.zip"
-checksum = "19890186a1c89285670334173414de108684e9e69b112c238c5665407ced3088"
-integrity = "2e27fa2fec41b64ac47d745e77549fb7cca3e39d94710fab455d0fda1c4c401f"
