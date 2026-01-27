@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import { ISigil } from "token/interfaces/ISigil.sol";
 import { IContinuousClearingAuction } from
   "cca/interfaces/IContinuousClearingAuction.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { WithSigner } from "../util/WithSigner.sol";
 import { console2 } from "forge-std/console2.sol";
 
@@ -13,7 +13,7 @@ import { console2 } from "forge-std/console2.sol";
   @author Tim Clancy <tim-clancy.eth>
   @custom:terry "Is this too much voodoo for the next ten centuries?"
 
-  A script to mint tokens to the CCA contract.
+  A script to transfer tokens to the CCA contract.
 
   @custom:date January 13th, 2026.
 */
@@ -27,13 +27,13 @@ contract PrepareCCA is
     uint128 _auctionSupply = uint128(vm.envUint("CCA_AUCTION_SUPPLY"));
 
     // Send tokens to the auction.
-    ISigil _token = ISigil(_tokenAddress);
+    IERC20 _token = IERC20(_tokenAddress);
     IContinuousClearingAuction _auction =
       IContinuousClearingAuction(_auctionAddress);
-    _token.mint(_auctionAddress, _auctionSupply);
+    _token.transfer(_auctionAddress, _auctionSupply);
     _auction.onTokensReceived();
     console2.log(
-      "Minted", _auctionSupply, "tokens to auction at", _auctionAddress
+      "Transferred", _auctionSupply, "tokens to auction at", _auctionAddress
     );
   }
 }

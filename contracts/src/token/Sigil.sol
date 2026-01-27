@@ -22,17 +22,15 @@ contract Sigil is
   ERC3009 {
 
   /**
-    Mint `_amount` tokens to `_recipient`. This is a faucet function for
-    testing.
+    Construct a new instance of the Sigil token, minting the entire supply to
+    `_recipient`.
 
-    @param _recipient The recipient of the newly-minted tokens.
-    @param _amount The amount of tokens to mint.
+    @param _recipient The recipient of the total token supply.
   */
-  function mint (
-    address _recipient,
-    uint256 _amount
-  ) external {
-    _mint(_recipient, _amount);
+  constructor (
+    address _recipient
+  ) {
+    _mint(_recipient, 1000000000_000000000000000000);
   }
 
   /**
@@ -63,7 +61,7 @@ contract Sigil is
     @return _ A tuple consisting of (the EIP-712 domain name, the EIP-712 domain
       version).
   */
-  function _domainNameAndVersion () internal view override returns (
+  function _domainNameAndVersion () internal pure override returns (
     string memory, string memory
   ) {
     return ("Sigil", "1");

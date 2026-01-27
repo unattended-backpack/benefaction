@@ -124,6 +124,10 @@ deploy:
 submit-bid:
 	cd ./contracts && forge script script/SubmitBid.s.sol --rpc-url $(RPC_URL) $(WALLET_ARGS) --broadcast && cd ../
 
+.PHONY: random-bids
+random-bids:
+	cd ./contracts && forge script script/RandomBids.s.sol --rpc-url $(RPC_URL) $(WALLET_ARGS) --broadcast && cd ../
+
 .PHONY: help
 help:
 	@echo "Build System"
@@ -142,6 +146,7 @@ help:
 	@echo "  prepare-cca       Prepare the CCA contract for auction start."
 	@echo "  deploy            Deploy and prepare all required contracts."
 	@echo "  submit-bid        Submit a bid to the CCA contract."
+	@echo "  random-bids       Submit random bids."
 	@echo "  help              Show this help message."
 	@echo ""
 	@echo "Configuration:"

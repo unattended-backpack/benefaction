@@ -31,8 +31,8 @@ contract WithSigner is
     This function modifier runs the provided function as if it were broadcast
     from a specified signer based on supplied environment variables. Our
     hierarchy is that an explicit `PRIVATE_KEY` environment variable takes
-    precedent over any `MNEMONIC` details and an explicit `MNEMONIC_INDEX`
-    environment variable takes precedent over the modifier's provided `_index`.
+    precedent over any `MNEMONIC` details, including the modifier's provided
+    `_index`.
 
     @param _index The mnemonic index to use when attempting to determine signer.
   */
@@ -49,13 +49,7 @@ contract WithSigner is
       if (bytes(_mnemonic).length == 0) {
         revert NoSignerCredentials();
       }
-
-      /*
-        Ignore the `_index` parameter if an environment variable override
-        exists.
-      */
-      uint32 _i = uint32(vm.envOr("MNEMONIC_INDEX", _index));
-      _privateKey = vm.deriveKey(_mnemonic, _i);
+      _privateKey = vm.deriveKey(_mnemonic, _index);
     }
 
     // Broadcast the function with the signer.

@@ -74,13 +74,13 @@ contract SigilERC3009Test is
 
   /// Set up the test.
   function setUp () public {
-    token = new Sigil();
+    token = new Sigil(address(this));
     alice = vm.addr(ALICE_PK);
     bob = vm.addr(BOB_PK);
     charlie = makeAddr("charlie");
 
     // Give tokens to Alice for testing.
-    token.mint(alice, 1000_000000000000000000);
+    token.transfer(alice, 1000_000000000000000000);
 
     // Get the domain separator.
     DOMAIN_SEPARATOR = token.DOMAIN_SEPARATOR();
@@ -635,7 +635,7 @@ contract SigilERC3009Test is
 
     // Give tokens to the signer contract.
     uint256 _amount = 100 ether;
-    token.mint(_signerAddress, _amount);
+    token.transfer(_signerAddress, _amount);
     bytes32 _nonce = bytes32(uint256(30));
     uint256 _validAfter = block.timestamp - 1;
     uint256 _validBefore = block.timestamp + 1 hours;
@@ -671,7 +671,7 @@ contract SigilERC3009Test is
 
     // Give tokens to the signer contract.
     uint256 _amount = 100 ether;
-    token.mint(_signerAddress, _amount);
+    token.transfer(_signerAddress, _amount);
     bytes32 _nonce = bytes32(uint256(31));
     uint256 _validAfter = block.timestamp - 1;
     uint256 _validBefore = block.timestamp + 1 hours;
@@ -715,7 +715,7 @@ contract SigilERC3009Test is
 
     // Give tokens to the signer contract.
     uint256 _amount = 100 ether;
-    token.mint(_signerAddress, _amount);
+    token.transfer(_signerAddress, _amount);
     bytes32 _nonce = bytes32(uint256(33));
     uint256 _validAfter = block.timestamp - 1;
     uint256 _validBefore = block.timestamp + 1 hours;
@@ -756,7 +756,7 @@ contract SigilERC3009Test is
 
     // Give tokens to the not-yet-deployed signer address.
     uint256 _amount = 100 ether;
-    token.mint(_signerAddress, _amount);
+    token.transfer(_signerAddress, _amount);
     bytes32 _nonce = bytes32(uint256(40));
     uint256 _validAfter = block.timestamp - 1;
     uint256 _validBefore = block.timestamp + 1 hours;
@@ -813,7 +813,7 @@ contract SigilERC3009Test is
 
     // Give tokens to the not-yet-deployed signer address.
     uint256 _amount = 100 ether;
-    token.mint(_signerAddress, _amount);
+    token.transfer(_signerAddress, _amount);
     bytes32 _nonce = bytes32(uint256(41));
     uint256 _validAfter = block.timestamp - 1;
     uint256 _validBefore = block.timestamp + 1 hours;
@@ -903,7 +903,7 @@ contract SigilERC3009Test is
     address _signerAddress = address(_signer);
 
     // Give tokens to the signer contract.
-    token.mint(_signerAddress, 100 ether);
+    token.transfer(_signerAddress, 100 ether);
     bytes32 _nonce = bytes32(uint256(50));
 
     // Compute the application's hash and get the wrapped hash for ERC-7739.
@@ -945,7 +945,7 @@ contract SigilERC3009Test is
     address _signerAddress = address(new MockERC7739Signer(alice));
 
     // Give tokens to the signer contract.
-    token.mint(_signerAddress, 100 ether);
+    token.transfer(_signerAddress, 100 ether);
     bytes32 _nonce = bytes32(uint256(51));
 
     // Sign the application hash directly (without wrapping) - this should fail.
@@ -970,7 +970,7 @@ contract SigilERC3009Test is
 
     // Give tokens to the signer contract.
     uint256 _amount = 100 ether;
-    token.mint(_signerAddress, _amount);
+    token.transfer(_signerAddress, _amount);
     bytes32 _nonce = bytes32(uint256(52));
     uint256 _validAfter = block.timestamp - 1;
     uint256 _validBefore = block.timestamp + 1 hours;

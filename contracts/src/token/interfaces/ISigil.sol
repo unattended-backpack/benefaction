@@ -7,8 +7,7 @@ pragma solidity 0.8.26;
   @author Tim Clancy <tim-clancy.eth>
   @custom:terry "Is this too much voodoo for the next ten centuries?"
 
-  The interface for the Sigil ERC-20 contract, a test token with a public
-  faucet mint function.
+  The interface for the Sigil ERC-20 contract.
 
   @custom:date January 4th, 2026.
 */
@@ -27,17 +26,5 @@ interface ISigil {
     @return _ The symbol of the token.
   */
   function symbol () external pure returns (string memory);
-
-  /**
-    Mint `_amount` tokens to `_recipient`. This is a faucet function for
-    testing.
-
-    @param _recipient The recipient of the newly-minted tokens.
-    @param _amount The amount of tokens to mint.
-  */
-  function mint (
-    address _recipient,
-    uint256 _amount
-  ) external;
 }
 
