@@ -27,9 +27,6 @@ interface IERC3009 {
   /// Thrown when an authorization nonce has already been used or canceled.
   error AuthorizationAlreadyUsed ();
 
-  /// Thrown when a signature fails validation.
-  error InvalidSignature ();
-
   /// Thrown when the caller of `receiveWithAuthorization` is not the payee.
   error CallerMustBePayee ();
 

@@ -7,6 +7,7 @@ import { MockERC1271SignerFactory } from
 import { MockERC7739Signer } from "./signers/MockERC7739Signer.sol";
 import { Test } from "forge-std/Test.sol";
 import { IERC3009 } from "token/interfaces/IERC3009.sol";
+import { ISignatureHelper } from "token/interfaces/ISignatureHelper.sol";
 import { Sigil } from "token/Sigil.sol";
 
 /**
@@ -320,7 +321,7 @@ contract SigilERC3009Test is
       _signTransferAuthorization(
         BOB_PK, alice, bob, _amount, _validAfter, _validBefore, _nonce
       );
-    vm.expectRevert(IERC3009.InvalidSignature.selector);
+    vm.expectRevert(ISignatureHelper.InvalidSignature.selector);
     token.transferWithAuthorization(
       alice, bob, _amount, _validAfter, _validBefore, _nonce, _signature
     );
@@ -475,7 +476,7 @@ contract SigilERC3009Test is
 
     // Sign with Bob's key instead of Alice's.
     bytes memory _signature = _signCancelAuthorization(BOB_PK, alice, _nonce);
-    vm.expectRevert(IERC3009.InvalidSignature.selector);
+    vm.expectRevert(ISignatureHelper.InvalidSignature.selector);
     token.cancelAuthorization(alice, _nonce, _signature);
   }
 
@@ -520,8 +521,8 @@ contract SigilERC3009Test is
     );
   }
 
-  /// A transfer exactly at validAfter timestamp is rejected.
-  function test_transferWithAuthorization_exactlyAtValidAfter_reverts ()
+  /// A transfer exactly at validAfter timestamp succeeds.
+  function test_transferWithAuthorization_exactlyAtValidAfter_succeeds ()
     public {
     uint256 _amount = 100 ether;
     bytes32 _nonce = bytes32(uint256(62));
@@ -531,16 +532,24 @@ contract SigilERC3009Test is
       _signTransferAuthorization(
         ALICE_PK, alice, bob, _amount, _validAfter, _validBefore, _nonce
       );
+    uint256 _aliceBalanceBefore = token.balanceOf(alice);
+    uint256 _bobBalanceBefore = token.balanceOf(bob);
 
-    // ERC-3009 requires block.timestamp > validAfter (strict inequality).
-    vm.expectRevert(IERC3009.AuthorizationNotYetValid.selector);
+    // Boundary: block.timestamp == validAfter is valid (uses < not <=).
+    vm.expectEmit(true, true, false, false, address(token));
+    emit IERC3009.AuthorizationUsed(alice, _nonce);
+    vm.expectEmit(true, true, false, true, address(token));
+    emit Transfer(alice, bob, _amount);
     token.transferWithAuthorization(
       alice, bob, _amount, _validAfter, _validBefore, _nonce, _signature
     );
+    assertEq(token.balanceOf(alice), _aliceBalanceBefore - _amount);
+    assertEq(token.balanceOf(bob), _bobBalanceBefore + _amount);
+    assertTrue(token.authorizationState(alice, _nonce));
   }
 
-  /// A transfer exactly at validBefore timestamp is rejected.
-  function test_transferWithAuthorization_exactlyAtValidBefore_reverts ()
+  /// A transfer exactly at validBefore timestamp succeeds.
+  function test_transferWithAuthorization_exactlyAtValidBefore_succeeds ()
     public {
 
     // Warp forward to avoid underflow when computing validAfter.
@@ -553,12 +562,20 @@ contract SigilERC3009Test is
       _signTransferAuthorization(
         ALICE_PK, alice, bob, _amount, _validAfter, _validBefore, _nonce
       );
+    uint256 _aliceBalanceBefore = token.balanceOf(alice);
+    uint256 _bobBalanceBefore = token.balanceOf(bob);
 
-    // ERC-3009 requires block.timestamp < validBefore (strict inequality).
-    vm.expectRevert(IERC3009.AuthorizationExpired.selector);
+    // Boundary: block.timestamp == validBefore is valid (uses > not >=).
+    vm.expectEmit(true, true, false, false, address(token));
+    emit IERC3009.AuthorizationUsed(alice, _nonce);
+    vm.expectEmit(true, true, false, true, address(token));
+    emit Transfer(alice, bob, _amount);
     token.transferWithAuthorization(
       alice, bob, _amount, _validAfter, _validBefore, _nonce, _signature
     );
+    assertEq(token.balanceOf(alice), _aliceBalanceBefore - _amount);
+    assertEq(token.balanceOf(bob), _bobBalanceBefore + _amount);
+    assertTrue(token.authorizationState(alice, _nonce));
   }
 
   /// Using a transfer signature for receive is rejected.
@@ -574,7 +591,7 @@ contract SigilERC3009Test is
         ALICE_PK, alice, bob, _amount, _validAfter, _validBefore, _nonce
       );
     vm.prank(bob);
-    vm.expectRevert(IERC3009.InvalidSignature.selector);
+    vm.expectRevert(ISignatureHelper.InvalidSignature.selector);
     token.receiveWithAuthorization(
       alice, bob, _amount, _validAfter, _validBefore, _nonce, _signature
     );
@@ -681,7 +698,7 @@ contract SigilERC3009Test is
       _signTransferAuthorization(
         BOB_PK, _signerAddress, bob, _amount, _validAfter, _validBefore, _nonce
       );
-    vm.expectRevert(IERC3009.InvalidSignature.selector);
+    vm.expectRevert(ISignatureHelper.InvalidSignature.selector);
     token.transferWithAuthorization(
       _signerAddress, bob, _amount, _validAfter, _validBefore, _nonce,
       _signature
@@ -954,7 +971,7 @@ contract SigilERC3009Test is
         ALICE_PK, _signerAddress, bob, 100 ether, block.timestamp - 1,
         block.timestamp + 1 hours, _nonce
       );
-    vm.expectRevert(IERC3009.InvalidSignature.selector);
+    vm.expectRevert(ISignatureHelper.InvalidSignature.selector);
     token.transferWithAuthorization(
       _signerAddress, bob, 100 ether, block.timestamp - 1,
       block.timestamp + 1 hours, _nonce, _signature

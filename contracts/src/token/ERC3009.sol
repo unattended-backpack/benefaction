@@ -2,9 +2,8 @@
 pragma solidity 0.8.26;
 
 import { IERC3009 } from "./interfaces/IERC3009.sol";
+import { SignatureHelper } from "./SignatureHelper.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
-import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -20,7 +19,7 @@ import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 abstract contract ERC3009 is
   IERC3009,
   ERC20,
-  EIP712 {
+  SignatureHelper {
 
   /**
     This is the EIP-712 typehash for transfers with authorization.
@@ -70,10 +69,10 @@ abstract contract ERC3009 is
 
     @param _authorizer The transfer authorizer's address.
     @param _nonce A unique nonce for this authorization.
-    @param _validAfter The minimum timestamp after which the authorized transfer
-      is valid.
-    @param _validBefore The maximum timestamp before which the authorized
-      transfer is valid.
+    @param _validAfter The minimum timestamp where the authorized transfer is
+      valid.
+    @param _validBefore The maximum timestamp where the authorized transfer is
+      valid.
   */
   function _requireValidAuthorization (
     address _authorizer,
@@ -81,39 +80,16 @@ abstract contract ERC3009 is
     uint256 _validAfter,
     uint256 _validBefore
   ) private view {
-    if (block.timestamp <= _validAfter) {
+    if (block.timestamp < _validAfter) {
       revert AuthorizationNotYetValid();
     }
 
-    if (block.timestamp >= _validBefore) {
+    if (block.timestamp > _validBefore) {
       revert AuthorizationExpired();
     }
 
     if (authorizationState[_authorizer][_nonce]) {
       revert AuthorizationAlreadyUsed();
-    }
-  }
-
-  /**
-    Validate that a given `_signature` matches `_dataHash` as signed by
-    `_signer`. This uses ERC-6492 signature validation to support counterfactual
-    smart contract signers without persisting side effects.
-
-    @param _signer The `_signer` address.
-    @param _dataHash The EIP-712 encoded struct hash.
-    @param _signature The signature from `_signer` to validate.
-  */
-  function _requireValidSignature (
-    address _signer,
-    bytes32 _dataHash,
-    bytes memory _signature
-  ) private {
-    if (
-      !SignatureCheckerLib.isValidERC6492SignatureNow(
-        _signer, _hashTypedData(_dataHash), _signature
-      )
-    ) {
-      revert InvalidSignature();
     }
   }
 
@@ -155,6 +131,7 @@ abstract contract ERC3009 is
     bytes memory _signature
   ) public {
     _requireValidAuthorization(_from, _nonce, _validAfter, _validBefore);
+    _markAuthorizationAsUsed(_from, _nonce);
     _requireValidSignature(
       _from,
       keccak256(
@@ -164,7 +141,6 @@ abstract contract ERC3009 is
         )
       ), _signature
     );
-    _markAuthorizationAsUsed(_from, _nonce);
     _transfer(_from, _to, _amount);
   }
 
@@ -228,6 +204,7 @@ abstract contract ERC3009 is
       revert CallerMustBePayee();
     }
     _requireValidAuthorization(_from, _nonce, _validAfter, _validBefore);
+    _markAuthorizationAsUsed(_from, _nonce);
     _requireValidSignature(
       _from,
       keccak256(
@@ -237,7 +214,6 @@ abstract contract ERC3009 is
         )
       ), _signature
     );
-    _markAuthorizationAsUsed(_from, _nonce);
     _transfer(_from, _to, _amount);
   }
 
@@ -290,12 +266,12 @@ abstract contract ERC3009 is
     if (authorizationState[_authorizer][_nonce]) {
       revert AuthorizationAlreadyUsed();
     }
+    authorizationState[_authorizer][_nonce] = true;
     _requireValidSignature(
       _authorizer,
       keccak256(abi.encode(CANCEL_AUTHORIZATION_TYPEHASH, _authorizer, _nonce)),
       _signature
     );
-    authorizationState[_authorizer][_nonce] = true;
     emit AuthorizationCanceled(_authorizer, _nonce);
   }
 
