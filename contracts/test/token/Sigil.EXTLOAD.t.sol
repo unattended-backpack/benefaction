@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity 0.8.26;
 
-import { Test } from "forge-std/Test.sol";
+import { SigilTestBase } from "./utils/SigilTestBase.sol";
 import { EXTTLOAD } from "token/EXTTLOAD.sol";
-import { Sigil } from "token/Sigil.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -95,7 +94,7 @@ contract TransientWriter is
   @custom:date January 27th, 2026.
 */
 contract SigilEXTLOADTest is
-  Test {
+  SigilTestBase {
 
   /// The Solady ERC-20 balance slot seed.
   uint256 private constant BALANCE_SLOT_SEED = 0x87a211a2;
@@ -106,9 +105,6 @@ contract SigilEXTLOADTest is
   /// The Solady ERC-20 total supply slot.
   bytes32 private constant TOTAL_SUPPLY_SLOT =
     bytes32(uint256(0x05345cdf77eb68f44c));
-
-  /// Store the address of a created Sigil token for testing.
-  Sigil public token;
 
   /// Store the address of the TransientWriter helper for testing.
   TransientWriter public writer;
@@ -121,7 +117,7 @@ contract SigilEXTLOADTest is
 
   /// Set up the test.
   function setUp () public {
-    token = new Sigil(address(this));
+    _setUpSigil();
     writer = new TransientWriter();
     alice = makeAddr("alice");
     bob = makeAddr("bob");

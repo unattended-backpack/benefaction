@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity 0.8.26;
 
-import { Test } from "forge-std/Test.sol";
+import { SigilTestBase } from "./utils/SigilTestBase.sol";
 import { IERC1363 } from "token/interfaces/IERC1363.sol";
 import { IERC1363Receiver } from "token/interfaces/IERC1363Receiver.sol";
 import { IERC1363Spender } from "token/interfaces/IERC1363Spender.sol";
@@ -345,7 +345,6 @@ contract ReentrantReceiver is
         token.transferAndCall(address(forwardTarget), _forwardAmount);
       }
     }
-
     return IERC1363Receiver.onTransferReceived.selector;
   }
 }
@@ -361,10 +360,7 @@ contract ReentrantReceiver is
   @custom:date January 28th, 2026.
 */
 contract SigilERC1363Test is
-  Test {
-
-  /// The Sigil token for testing.
-  Sigil public token;
+  SigilTestBase {
 
   /// A valid receiver contract.
   ValidReceiver public validReceiver;
@@ -401,7 +397,7 @@ contract SigilERC1363Test is
 
   /// Set up the test.
   function setUp () public {
-    token = new Sigil(address(this));
+    _setUpSigil();
     validReceiver = new ValidReceiver();
     invalidReceiver = new InvalidReceiver();
     revertingReceiver = new RevertingReceiver();

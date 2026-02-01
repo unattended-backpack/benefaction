@@ -15,6 +15,17 @@ pragma solidity 0.8.26;
 interface IERC2612 {
 
   /**
+    Return whether this contract supports a given interface.
+
+    @param _interfaceId The interface identifier to check.
+
+    @return _ Whether the interface is supported.
+  */
+  function supportsInterface (
+    bytes4 _interfaceId
+  ) external view returns (bool);
+
+  /**
     Returns the domain separator used in the encoding of the signature for
     `permit`, as defined by EIP-712.
 

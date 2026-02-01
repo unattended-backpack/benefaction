@@ -25,6 +25,9 @@ abstract contract ERC1363 is
   /// The ERC-165 interface ID for ERC-165 itself.
   bytes4 private constant ERC165_INTERFACE_ID = 0x01ffc9a7;
 
+  /// The ERC-165 interface ID for ERC-20.
+  bytes4 private constant ERC20_INTERFACE_ID = 0x36372b07;
+
   /// The ERC-165 interface ID for ERC-1363.
   bytes4 private constant ERC1363_INTERFACE_ID = 0xb0202a11;
 
@@ -39,6 +42,7 @@ abstract contract ERC1363 is
     bytes4 _interfaceId
   ) public view virtual returns (bool) {
     return _interfaceId == ERC165_INTERFACE_ID
+    || _interfaceId == ERC20_INTERFACE_ID
     || _interfaceId == ERC1363_INTERFACE_ID;
   }
 

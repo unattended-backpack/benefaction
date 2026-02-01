@@ -15,6 +15,17 @@ pragma solidity 0.8.26;
 interface IERC5805 {
 
   /**
+    Return whether this contract supports a given interface.
+
+    @param _interfaceId The interface identifier to check.
+
+    @return _ Whether the interface is supported.
+  */
+  function supportsInterface (
+    bytes4 _interfaceId
+  ) external view returns (bool);
+
+  /**
     Returns the machine-readable description of the clock mode, as specified in
     EIP-6372.
 

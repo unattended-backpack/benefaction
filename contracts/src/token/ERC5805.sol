@@ -22,9 +22,36 @@ abstract contract ERC5805 is
   ERC20Votes,
   SignatureHelper {
 
-  /// `keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)")`.
+  /**
+    The EIP-712 typehash for delegation by signature.
+    `keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)")`.
+  */
   bytes32 private constant _ERC5805_DELEGATION_TYPEHASH =
     0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
+
+  /// The ERC-165 interface ID for ERC-165 itself.
+  bytes4 private constant ERC165_INTERFACE_ID = 0x01ffc9a7;
+
+  /// The ERC-165 interface ID for ERC-20.
+  bytes4 private constant ERC20_INTERFACE_ID = 0x36372b07;
+
+  /// The ERC-165 interface ID for ERC-5805.
+  bytes4 private constant ERC5805_INTERFACE_ID = 0xbd745767;
+
+  /**
+    Return whether this contract supports a given interface.
+
+    @param _interfaceId The interface identifier to check.
+
+    @return _ Whether the interface is supported.
+  */
+  function supportsInterface (
+    bytes4 _interfaceId
+  ) public view virtual returns (bool) {
+    return _interfaceId == ERC165_INTERFACE_ID
+    || _interfaceId == ERC20_INTERFACE_ID
+    || _interfaceId == ERC5805_INTERFACE_ID;
+  }
 
   /**
     Use a valid signature by `_delegator` to set the voting delegate of
@@ -107,9 +134,10 @@ abstract contract ERC5805 is
 
     @return _ The clock mode description string.
   */
-  function CLOCK_MODE ()
-    public view virtual override(IERC5805, ERC20Votes) returns (string memory)
-  {
+  function CLOCK_MODE () public view virtual override(IERC5805, ERC20Votes)
+   returns (
+    string memory
+  ) {
     return ERC20Votes.CLOCK_MODE();
   }
 
@@ -118,9 +146,9 @@ abstract contract ERC5805 is
 
     @return _ The current clock value.
   */
-  function clock ()
-    public view virtual override(IERC5805, ERC20Votes) returns (uint48)
-  {
+  function clock () public view virtual override(IERC5805, ERC20Votes) returns (
+    uint48
+  ) {
     return ERC20Votes.clock();
   }
 
@@ -143,8 +171,9 @@ abstract contract ERC5805 is
     @return _ The total supply of votes.
   */
   function getVotesTotalSupply ()
-    public view virtual override(IERC5805, ERC20Votes) returns (uint256)
-  {
+    public view virtual override(IERC5805, ERC20Votes) returns (
+    uint256
+  ) {
     return ERC20Votes.getVotesTotalSupply();
   }
 

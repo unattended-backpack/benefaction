@@ -5,9 +5,8 @@ import { MockERC1271Signer } from "./signers/MockERC1271Signer.sol";
 import { MockERC1271SignerFactory } from
   "./signers/MockERC1271SignerFactory.sol";
 import { MockERC7739Signer } from "./signers/MockERC7739Signer.sol";
-import { Test } from "forge-std/Test.sol";
+import { SigilTestBase } from "./utils/SigilTestBase.sol";
 import { ISignatureHelper } from "token/interfaces/ISignatureHelper.sol";
-import { Sigil } from "token/Sigil.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -22,7 +21,7 @@ import { Sigil } from "token/Sigil.sol";
   @custom:date January 29th, 2026.
 */
 contract SigilERC2612Test is
-  Test {
+  SigilTestBase {
 
   /**
     Declare the Approval event for expectEmit.
@@ -53,9 +52,6 @@ contract SigilERC2612Test is
   address internal constant EIP6492_UNIVERSAL_VALIDATOR =
     0x00007bd799e4A591FeA53f8A8a3E9f931626Ba7e;
 
-  /// The Sigil token for testing.
-  Sigil public token;
-
   /// Alice's address (derived from private key).
   address internal alice;
 
@@ -70,7 +66,7 @@ contract SigilERC2612Test is
 
   /// Set up the test.
   function setUp () public {
-    token = new Sigil(address(this));
+    _setUpSigil();
 
     // Create Alice with a known private key for signing.
     alicePrivateKey = 0xA11CE;

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity 0.8.26;
 
-import { Test } from "forge-std/Test.sol";
-import { Sigil } from "token/Sigil.sol";
+import { SigilTestBase } from "./utils/SigilTestBase.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -274,10 +273,7 @@ contract RevertingConstructor {
   @custom:date January 27th, 2026.
 */
 contract SigilDelegateViewTest is
-  Test {
-
-  /// Store the address of a created Sigil token for testing.
-  Sigil public token;
+  SigilTestBase {
 
   /// Store the address of the query contract.
   SigilQuery public query;
@@ -296,7 +292,7 @@ contract SigilDelegateViewTest is
 
   /// Set up the test.
   function setUp () public {
-    token = new Sigil(address(this));
+    _setUpSigil();
     query = new SigilQuery();
     reverter = new RevertingQuery();
     stateWriter = new StateWritingQuery();

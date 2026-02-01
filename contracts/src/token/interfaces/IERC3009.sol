@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity 0.8.26;
 
-import { ERC20 } from "solady/tokens/ERC20.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
-import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
-
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
   @title An ERC-3009 Interface
@@ -51,6 +47,17 @@ interface IERC3009 {
     address indexed authorizer,
     bytes32 indexed nonce
   );
+
+  /**
+    Return whether this contract supports a given interface.
+
+    @param _interfaceId The interface identifier to check.
+
+    @return _ Whether the interface is supported.
+  */
+  function supportsInterface (
+    bytes4 _interfaceId
+  ) external view returns (bool);
 
   /**
     A double mapping from authorizer address to authorization nonce to whether

@@ -5,9 +5,8 @@ import { MockERC1271Signer } from "./signers/MockERC1271Signer.sol";
 import { MockERC1271SignerFactory } from
   "./signers/MockERC1271SignerFactory.sol";
 import { MockERC7739Signer } from "./signers/MockERC7739Signer.sol";
-import { Test } from "forge-std/Test.sol";
+import { SigilTestBase } from "./utils/SigilTestBase.sol";
 import { ISignatureHelper } from "token/interfaces/ISignatureHelper.sol";
-import { Sigil } from "token/Sigil.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -22,7 +21,7 @@ import { Sigil } from "token/Sigil.sol";
   @custom:date January 29th, 2026.
 */
 contract SigilERC5805Test is
-  Test {
+  SigilTestBase {
 
   /**
     Emitted when an account changes its delegate.
@@ -64,9 +63,6 @@ contract SigilERC5805Test is
   address internal constant EIP6492_UNIVERSAL_VALIDATOR =
     0x00007bd799e4A591FeA53f8A8a3E9f931626Ba7e;
 
-  /// The Sigil token for testing.
-  Sigil public token;
-
   /// Alice's address (derived from private key).
   address internal alice;
 
@@ -87,7 +83,7 @@ contract SigilERC5805Test is
 
   /// Set up the test.
   function setUp () public {
-    token = new Sigil(address(this));
+    _setUpSigil();
 
     // Create users with known private keys for signing.
     alicePrivateKey = 0xA11CE;
@@ -434,34 +430,28 @@ contract SigilERC5805Test is
     token.delegateBySig(bob, 0, _expiry, _v, _r, _s);
   }
 
-  /**
-    delegateBySig with corrupted v does not delegate for Alice. Note: Corrupted
-    signatures may recover to random addresses with nonce 0, so they might not
-    revert but will delegate for wrong signer.
-  */
-  function test_delegateBySig_corruptedV_wrongSigner () public {
+  /// delegateBySig with corrupted v reverts with invalid signature.
+  function test_delegateBySig_corruptedV_reverts () public {
     uint256 _expiry = block.timestamp + 1 hours;
     (uint8 _v, bytes32 _r, bytes32 _s) = _signDelegation(
       alicePrivateKey, bob, 0, _expiry
     );
 
-    // This may succeed but for a different recovered address.
+    // ERC5805DelegateInvalidSignature()
+    vm.expectRevert(bytes4(0x1838d95c));
     token.delegateBySig(bob, 0, _expiry, _v + 1, _r, _s);
-
-    // Alice's delegate should be unchanged.
-    assertEq(token.delegates(alice), address(0));
   }
 
-  /// delegateBySig with corrupted r does not delegate for Alice.
-  function test_delegateBySig_corruptedR_wrongSigner () public {
+  /// delegateBySig with corrupted r reverts with invalid signature.
+  function test_delegateBySig_corruptedR_reverts () public {
     uint256 _expiry = block.timestamp + 1 hours;
     (uint8 _v, bytes32 _r, bytes32 _s) = _signDelegation(
       alicePrivateKey, bob, 0, _expiry
     );
-    token.delegateBySig(bob, 0, _expiry, _v, bytes32(uint256(_r) + 1), _s);
 
-    // Alice's delegate should be unchanged.
-    assertEq(token.delegates(alice), address(0));
+    // ERC5805DelegateInvalidSignature()
+    vm.expectRevert(bytes4(0x1838d95c));
+    token.delegateBySig(bob, 0, _expiry, _v, bytes32(uint256(_r) + 1), _s);
   }
 
   /// delegateBySig with corrupted s does not delegate for Alice.

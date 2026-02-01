@@ -21,6 +21,15 @@ abstract contract ERC2612 is
   ERC20,
   SignatureHelper {
 
+  /// The ERC-165 interface ID for ERC-165 itself.
+  bytes4 private constant ERC165_INTERFACE_ID = 0x01ffc9a7;
+
+  /// The ERC-165 interface ID for ERC-20.
+  bytes4 private constant ERC20_INTERFACE_ID = 0x36372b07;
+
+  /// The ERC-165 interface ID for ERC-2612.
+  bytes4 private constant ERC2612_INTERFACE_ID = 0x9d8ff7da;
+
   /**
     @custom:preserve
 
@@ -60,6 +69,21 @@ abstract contract ERC2612 is
   */
   uint256 private constant _APPROVAL_EVENT_SIGNATURE =
     0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925;
+
+  /**
+    Return whether this contract supports a given interface.
+
+    @param _interfaceId The interface identifier to check.
+
+    @return _ Whether the interface is supported.
+  */
+  function supportsInterface (
+    bytes4 _interfaceId
+  ) public view virtual returns (bool) {
+    return _interfaceId == ERC165_INTERFACE_ID
+    || _interfaceId == ERC20_INTERFACE_ID
+    || _interfaceId == ERC2612_INTERFACE_ID;
+  }
 
   /**
     Returns the domain separator used in the encoding of the signature for

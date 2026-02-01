@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity 0.8.26;
 
+import { BurnOnlyERC4626 } from "./BurnOnlyERC4626.sol";
 import { DelegateView } from "./DelegateView.sol";
 import { ERC1363 } from "./ERC1363.sol";
 import { ERC2612 } from "./ERC2612.sol";
@@ -28,20 +29,49 @@ contract Sigil is
   ERC2612,
   ERC3009,
   ERC5805,
+  BurnOnlyERC4626,
   EXTSLOAD,
   EXTTLOAD,
   DelegateView {
 
   /**
-    Construct a new instance of the Sigil token, minting the entire supply to
-    `_recipient`.
+    Construct a new instance of the Sigil token by specifying the `_owner`,
+    which is the privileged caller able to call the one-time `initialize`
+    function and rescue any assets accidentally sent to this contract.
 
-    @param _recipient The recipient of the total token supply.
+    @param _owner The owner of the token.
   */
   constructor (
-    address _recipient
+    address _owner
+  ) BurnOnlyERC4626(_owner) { }
+
+  /**
+    Return whether this contract supports a given interface.
+
+    @param _interfaceId The interface identifier to check.
+
+    @return _ Whether the interface is supported.
+  */
+  function supportsInterface (
+    bytes4 _interfaceId
+  ) public view override(ERC1363, ERC2612, ERC3009, ERC5805, BurnOnlyERC4626)
+   returns (
+    bool
   ) {
-    _mint(_recipient, 1000000000_000000000000000000);
+    return ERC1363.supportsInterface(_interfaceId)
+    || ERC2612.supportsInterface(_interfaceId)
+    || ERC3009.supportsInterface(_interfaceId)
+    || ERC5805.supportsInterface(_interfaceId)
+    || BurnOnlyERC4626.supportsInterface(_interfaceId);
+  }
+
+  /**
+    Return the number of share tokens to be initially minted. One billion.
+
+    @return _ The initial token supply.
+  */
+  function _initialMint () internal pure override returns (uint256) {
+    return 1000000000e18;
   }
 
   /**
@@ -53,6 +83,16 @@ contract Sigil is
     string memory
   ) {
     return "Sigil";
+  }
+
+  /**
+    Return a constant hash of the token name to allow Solady to behave more
+    optimally. This is set to `keccak256(bytes("Sigil"))`.
+
+    @return _ The constant hash of the token name.
+  */
+  function _constantNameHash () internal pure override returns (bytes32) {
+    return 0x186f3621aaa0f57aba0426c11019615813acda019a946a394416b38a82d50cdf;
   }
 
   /**
@@ -79,13 +119,48 @@ contract Sigil is
   }
 
   /**
-    Return a constant hash of the token name to allow Solady to behave more
-    optimally. This is set to `keccak256(bytes("Sigil"))`.
+    Returns the domain separator used in the encoding of the signature for
+    `permit`, as defined by EIP-712.
 
-    @return _ The constant hash of the token name.
+    @return _ The EIP-712 domain separator.
   */
-  function _constantNameHash () internal pure override returns (bytes32) {
-    return 0x186f3621aaa0f57aba0426c11019615813acda019a946a394416b38a82d50cdf;
+  function DOMAIN_SEPARATOR () public view override(ERC20, ERC2612) returns (
+    bytes32
+  ) {
+    return _domainSeparator();
+  }
+
+  /**
+    Returns the number of decimal places of the token, which is 18 because we're
+    not savages.
+
+    @return _ The number of decimal places of the token.
+  */
+  function decimals () public pure override(ERC20, BurnOnlyERC4626) returns (
+    uint8
+  ) {
+    return 18;
+  }
+
+  /**
+    Return the underlying ERC-4626 vault asset. For us, this is wrapped Ether.
+    There is no second best.
+
+    @return _ The ERC-4626 vault asset that may be redeemed.
+  */
+  function asset () public pure override returns (address) {
+    return 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+  }
+
+  /**
+    Override ERC-4626 to support the initial mint having a backing of one
+    attoEther per token.
+
+    @return _ The number of decimals to offset the minted supply of ERC-4626
+      shares against the `asset` supply.
+  */
+  function _decimalsOffset () internal pure override returns (uint8) {
+    return 18;
   }
 
   /**
@@ -130,18 +205,6 @@ contract Sigil is
     address _owner
   ) public view override(ERC20, ERC2612, ERC5805) returns (uint256) {
     return ERC20.nonces(_owner);
-  }
-
-  /**
-    Returns the domain separator used in the encoding of the signature for
-    `permit`, as defined by EIP-712.
-
-    @return _ The EIP-712 domain separator.
-  */
-  function DOMAIN_SEPARATOR () public view override(ERC20, ERC2612) returns (
-    bytes32
-  ) {
-    return _domainSeparator();
   }
 
   /**

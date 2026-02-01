@@ -47,6 +47,15 @@ abstract contract ERC3009 is
   bytes32 private constant CANCEL_AUTHORIZATION_TYPEHASH =
     0x158b0a9edf7a828aad02f63cd515c68ef2f50ba807396f6d12842833a1597429;
 
+  /// The ERC-165 interface ID for ERC-165 itself.
+  bytes4 private constant ERC165_INTERFACE_ID = 0x01ffc9a7;
+
+  /// The ERC-165 interface ID for ERC-20.
+  bytes4 private constant ERC20_INTERFACE_ID = 0x36372b07;
+
+  /// The ERC-165 interface ID for ERC-3009.
+  bytes4 private constant ERC3009_INTERFACE_ID = 0xbff533ba;
+
   /**
     A double mapping from authorizer address to authorization nonce to whether
     or not the authorization nonce may still be used in a transfer.
@@ -63,6 +72,21 @@ abstract contract ERC3009 is
       bytes32 _nonce => bool _valid
     )
   ) public authorizationState;
+
+  /**
+    Return whether this contract supports a given interface.
+
+    @param _interfaceId The interface identifier to check.
+
+    @return _ Whether the interface is supported.
+  */
+  function supportsInterface (
+    bytes4 _interfaceId
+  ) public view virtual returns (bool) {
+    return _interfaceId == ERC165_INTERFACE_ID
+    || _interfaceId == ERC20_INTERFACE_ID
+    || _interfaceId == ERC3009_INTERFACE_ID;
+  }
 
   /**
     Check that a given ERC-3009 authorization is valid.

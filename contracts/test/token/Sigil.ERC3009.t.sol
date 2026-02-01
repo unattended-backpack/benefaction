@@ -5,10 +5,9 @@ import { MockERC1271Signer } from "./signers/MockERC1271Signer.sol";
 import { MockERC1271SignerFactory } from
   "./signers/MockERC1271SignerFactory.sol";
 import { MockERC7739Signer } from "./signers/MockERC7739Signer.sol";
-import { Test } from "forge-std/Test.sol";
+import { SigilTestBase } from "./utils/SigilTestBase.sol";
 import { IERC3009 } from "token/interfaces/IERC3009.sol";
 import { ISignatureHelper } from "token/interfaces/ISignatureHelper.sol";
-import { Sigil } from "token/Sigil.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -21,7 +20,7 @@ import { Sigil } from "token/Sigil.sol";
   @custom:date January 21st, 2026.
 */
 contract SigilERC3009Test is
-  Test {
+  SigilTestBase {
 
   /**
     The ERC-20 Transfer event.
@@ -58,9 +57,6 @@ contract SigilERC3009Test is
   address internal constant EIP6492_UNIVERSAL_VALIDATOR =
     0x00007bd799e4A591FeA53f8A8a3E9f931626Ba7e;
 
-  /// Store the address of a created Sigil token for testing.
-  Sigil public token;
-
   /// Store Alice's address.
   address internal alice;
 
@@ -75,7 +71,7 @@ contract SigilERC3009Test is
 
   /// Set up the test.
   function setUp () public {
-    token = new Sigil(address(this));
+    _setUpSigil();
     alice = vm.addr(ALICE_PK);
     bob = vm.addr(BOB_PK);
     charlie = makeAddr("charlie");

@@ -24,7 +24,7 @@ contract CalculateFloor is
   uint256 private constant TOKEN_PRICE = 3200;
 
   /// Run the script.
-  function run () external {
+  function run () external pure {
     uint256 _floorPrice = (2 ** 96) / (ETHER_PRICE / TOKEN_PRICE);
     console2.log("floor price", _floorPrice);
   }
