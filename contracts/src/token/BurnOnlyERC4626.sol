@@ -92,7 +92,7 @@ abstract contract BurnOnlyERC4626 is
   );
 
   /**
-    Return the number of share tokens to be initially minted.
+    Return the number of shares to be initially minted.
 
     @return _ The initial token supply.
   */
@@ -101,9 +101,9 @@ abstract contract BurnOnlyERC4626 is
   /**
     Allow the owner to initialize the token. This is a one-time action which
     provisions the starting ERC-4626 `asset` and mints the entire supply of
-    share tokens to `_recipient`. This function can only be called once, after
-    which future ERC-4626 mints or deposits are disabled. If the underlying
-    ERC-4626 `asset` is malicious, this function is unsafe.
+    shares to `_recipient`. This function can only be called once, after which
+    future ERC-4626 mints or deposits are disabled. If the underlying ERC-4626
+    `asset` is malicious, this function is unsafe.
 
     @param _recipient The recipient of the total token supply.
   */
@@ -122,7 +122,7 @@ abstract contract BurnOnlyERC4626 is
   /**
     Returns the maximum amount of the underlying asset that can be deposited
     into the ERC-4626 vault via a deposit call. Deposits are always disabled
-    because all share tokens are minted via the one-time `initialize` function.
+    because all shares are minted via the one-time `initialize` function.
 
     @return _ Always zero because deposits are disabled.
   */
@@ -133,10 +133,10 @@ abstract contract BurnOnlyERC4626 is
   }
 
   /**
-    Returns the maximum amount of the ERC-4626 vault shares that can be minted
+    Returns the maximum number of the ERC-4626 vault shares that can be minted
     via a mint call.
 
-    @return _ The maximum amount of shares that can be minted.
+    @return _ The maximum number of shares that can be minted.
   */
   function maxMint (
     address
@@ -314,32 +314,32 @@ abstract contract BurnOnlyERC4626 is
     Simulate the effects of a withdrawal at the current block, given current
     on-chain conditions.
 
-    @param _assets The amount of underlying assets to withdraw.
+    @param _amount The amount of underlying assets to withdraw.
 
     @return _ The amount of vault shares that would be burned.
   */
   function previewWithdraw (
-    uint256 _assets
+    uint256 _amount
   ) public view override(IERC4626, ERC4626) returns (uint256) {
-    return ERC4626.previewWithdraw(_assets);
+    return ERC4626.previewWithdraw(_amount);
   }
 
   /**
     Burn shares from `_owner` and send exactly `_assets` of underlying tokens to
     `_receiver`.
 
-    @param _assets The amount of underlying assets to withdraw.
+    @param _amount The amount of underlying assets to withdraw.
     @param _receiver The address that will receive the withdrawn assets.
     @param _owner The address that owns the shares being burned.
 
     @return _ The amount of vault shares burned from `_owner`.
   */
   function withdraw (
-    uint256 _assets,
+    uint256 _amount,
     address _receiver,
     address _owner
   ) public override(IERC4626, ERC4626) returns (uint256) {
-    return ERC4626.withdraw(_assets, _receiver, _owner);
+    return ERC4626.withdraw(_amount, _receiver, _owner);
   }
 
   /**

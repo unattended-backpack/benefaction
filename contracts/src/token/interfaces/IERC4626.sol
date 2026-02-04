@@ -45,12 +45,12 @@ interface IERC4626 {
     Return the amount of shares that the vault would exchange for the amount of
     assets provided, in an ideal scenario where all conditions are met.
 
-    @param _assets The amount of underlying assets to convert.
+    @param _amount The amount of underlying assets to convert.
 
     @return _ The amount of vault shares.
   */
   function convertToShares (
-    uint256 _assets
+    uint256 _amount
   ) external view returns (uint256);
 
   /**
@@ -117,12 +117,12 @@ interface IERC4626 {
     Simulate the effects of a deposit at the current block, given current
     on-chain conditions.
 
-    @param _assets The amount of underlying assets to deposit.
+    @param _amount The amount of underlying assets to deposit.
 
     @return _ The amount of vault shares that would be minted.
   */
   function previewDeposit (
-    uint256 _assets
+    uint256 _amount
   ) external view returns (uint256);
 
   /**
@@ -141,12 +141,12 @@ interface IERC4626 {
     Simulate the effects of a withdrawal at the current block, given current
     on-chain conditions.
 
-    @param _assets The amount of underlying assets to withdraw.
+    @param _amount The amount of underlying assets to withdraw.
 
     @return _ The amount of vault shares that would be burned.
   */
   function previewWithdraw (
-    uint256 _assets
+    uint256 _amount
   ) external view returns (uint256);
 
   /**
@@ -165,13 +165,13 @@ interface IERC4626 {
     Deposit `_assets` of underlying tokens into the vault, minting shares to
     `_receiver`.
 
-    @param _assets The amount of underlying assets to deposit.
+    @param _amount The amount of underlying assets to deposit.
     @param _receiver The address that will receive the minted shares.
 
     @return _ The amount of vault shares minted to `_receiver`.
   */
   function deposit (
-    uint256 _assets,
+    uint256 _amount,
     address _receiver
   ) external returns (uint256);
 
@@ -193,14 +193,14 @@ interface IERC4626 {
     Burn shares from `_owner` and send exactly `_assets` of underlying tokens to
     `_receiver`.
 
-    @param _assets The amount of underlying assets to withdraw.
+    @param _amount The amount of underlying assets to withdraw.
     @param _receiver The address that will receive the withdrawn assets.
     @param _owner The address that owns the shares being burned.
 
     @return _ The amount of vault shares burned from `_owner`.
   */
   function withdraw (
-    uint256 _assets,
+    uint256 _amount,
     address _receiver,
     address _owner
   ) external returns (uint256);

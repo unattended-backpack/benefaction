@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-VPL WITH AGPL-3.0-only
 pragma solidity 0.8.26;
 
+import { BurnableERC3009 } from "./BurnableERC3009.sol";
 import { BurnOnlyERC4626 } from "./BurnOnlyERC4626.sol";
 import { DelegateView } from "./DelegateView.sol";
 import { ERC1363 } from "./ERC1363.sol";
 import { ERC2612 } from "./ERC2612.sol";
-import { ERC3009 } from "./ERC3009.sol";
 import { ERC5805 } from "./ERC5805.sol";
 import { EXTSLOAD } from "./EXTSLOAD.sol";
 import { EXTTLOAD } from "./EXTTLOAD.sol";
 import { ISigil } from "./interfaces/ISigil.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
 import { ERC20Votes } from "solady/tokens/ERC20Votes.sol";
+import { Lifebuoy } from "solady/utils/Lifebuoy.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -27,12 +28,16 @@ contract Sigil is
   ISigil,
   ERC1363,
   ERC2612,
-  ERC3009,
+  BurnableERC3009,
   ERC5805,
   BurnOnlyERC4626,
   EXTSLOAD,
   EXTTLOAD,
-  DelegateView {
+  DelegateView,
+  Lifebuoy {
+
+  /// An error emitted when attempting to rescue the ERC-4626 vault asset.
+  error CannotRescueVaultAsset ();
 
   /**
     Construct a new instance of the Sigil token by specifying the `_owner`,
@@ -54,13 +59,14 @@ contract Sigil is
   */
   function supportsInterface (
     bytes4 _interfaceId
-  ) public view override(ERC1363, ERC2612, ERC3009, ERC5805, BurnOnlyERC4626)
-   returns (
+  ) public view override(
+    ERC1363, ERC2612, BurnableERC3009, ERC5805, BurnOnlyERC4626
+  ) returns (
     bool
   ) {
     return ERC1363.supportsInterface(_interfaceId)
     || ERC2612.supportsInterface(_interfaceId)
-    || ERC3009.supportsInterface(_interfaceId)
+    || BurnableERC3009.supportsInterface(_interfaceId)
     || ERC5805.supportsInterface(_interfaceId)
     || BurnOnlyERC4626.supportsInterface(_interfaceId);
   }
@@ -222,6 +228,25 @@ contract Sigil is
     uint256 _amount
   ) internal override(ERC20, ERC20Votes) {
     ERC20Votes._afterTokenTransfer(_from, _to, _amount);
+  }
+
+  /**
+    Rescue ERC-20 tokens accidentally sent to this contract. The ERC-4626 vault
+    asset (WETH) cannot be rescued.
+
+    @param _token The address of the ERC-20 token to rescue.
+    @param _to The address to send the rescued tokens to.
+    @param _amount The amount of tokens to rescue.
+  */
+  function rescueERC20 (
+    address _token,
+    address _to,
+    uint256 _amount
+  ) public payable override onlyRescuer(_LIFEBUOY_RESCUE_ERC20_LOCK) {
+    if (_token == asset()) {
+      revert CannotRescueVaultAsset();
+    }
+    Lifebuoy.rescueERC20(_token, _to, _amount);
   }
 }
 
