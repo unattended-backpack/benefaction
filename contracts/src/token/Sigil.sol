@@ -10,8 +10,10 @@ import { ERC5805 } from "./ERC5805.sol";
 import { EXTSLOAD } from "./EXTSLOAD.sol";
 import { EXTTLOAD } from "./EXTTLOAD.sol";
 import { ISigil } from "./interfaces/ISigil.sol";
+import { ZKMint } from "./zk_mint/ZKMint.sol";
 import { ERC20 } from "solady/tokens/ERC20.sol";
 import { ERC20Votes } from "solady/tokens/ERC20Votes.sol";
+import { EIP712 } from "solady/utils/EIP712.sol";
 import { Lifebuoy } from "solady/utils/Lifebuoy.sol";
 
 /**
@@ -31,6 +33,7 @@ contract Sigil is
   BurnableERC3009,
   ERC5805,
   BurnOnlyERC4626,
+  ZKMint,
   EXTSLOAD,
   EXTTLOAD,
   DelegateView,
@@ -39,16 +42,35 @@ contract Sigil is
   /// An error emitted when attempting to rescue the ERC-4626 vault asset.
   error CannotRescueVaultAsset ();
 
+  /// The total amount reminted through ZK mints.
+  uint256 private _totalReminted;
+
+  /// A flag to suppress the `_afterTokenTransfer` hook during remints.
+  bool private _inRemint;
+
   /**
     Construct a new instance of the Sigil token by specifying the `_owner`,
     which is the privileged caller able to call the one-time `initialize`
     function and rescue any assets accidentally sent to this contract.
 
     @param _owner The owner of the token.
+    @param _verifier The address of the proof verifier contract.
+    @param _poseidon2 The address of the deployed Poseidon2 contract.
+    @param _rateLimitPeriod The rate limit window duration in seconds.
+    @param _rateLimitSupplyBasisPoints The rate limit as basis points of total
+      supply.
+    @param _rateLimitFloor A floor value for the rate limit.
   */
   constructor (
-    address _owner
-  ) BurnOnlyERC4626(_owner) { }
+    address _owner,
+    address _verifier,
+    address _poseidon2,
+    uint256 _rateLimitPeriod,
+    uint256 _rateLimitSupplyBasisPoints,
+    uint256 _rateLimitFloor
+  )
+    BurnOnlyERC4626(_owner) ZKMint(_verifier, _poseidon2, _rateLimitPeriod,
+  _rateLimitSupplyBasisPoints, _rateLimitFloor) { }
 
   /**
     Return whether this contract supports a given interface.
@@ -149,6 +171,17 @@ contract Sigil is
   }
 
   /**
+    Return the total supply of the token, offset by the total amount reminted
+    through ZK mints. This prevents remints from inflating the visible supply,
+    which is important for the `BurnOnlyERC4626` accounting.
+
+    @return _ The total supply of the token.
+  */
+  function totalSupply () public view override returns (uint256) {
+    return ERC20.totalSupply() - _totalReminted;
+  }
+
+  /**
     Return the underlying ERC-4626 vault asset. For us, this is wrapped Ether.
     There is no second best.
 
@@ -214,9 +247,71 @@ contract Sigil is
   }
 
   /**
+    Resolve the `_hashTypedData` diamond between Solady's EIP-712 implementation
+    and the abstract declaration in ZKMint.
+
+    @param _structHash The struct hash to wrap with domain separator.
+
+    @return _ The full EIP-712 hash.
+  */
+  function _hashTypedData (
+    bytes32 _structHash
+  ) internal view override(EIP712, ZKMint) returns (bytes32) {
+    return EIP712._hashTypedData(_structHash);
+  }
+
+  /**
+    Return the current total supply used for rate limit calculations.
+
+    @return _ The total supply of the token.
+  */
+  function _totalSupply () internal view override returns (uint256) {
+    return totalSupply();
+  }
+
+  /**
+    Remint tokens to a recipient as part of a ZK mint. The `_afterTokenTransfer`
+    hook is suppressed so the balance leaf and account note hashes can be
+    batch-inserted into the hash tree together.
+
+    @param _to The recipient address.
+    @param _amount The amount to remint.
+    @param _accountNoteHashes The account note commitments to insert.
+  */
+  function _remint (
+    address _to,
+    uint256 _amount,
+    uint256[] memory _accountNoteHashes
+  ) internal override {
+    _inRemint = true;
+    _mint(_to, _amount);
+    _inRemint = false;
+    _totalReminted += _amount;
+    _updateBalanceInTree(_to, balanceOf(_to), _accountNoteHashes);
+  }
+
+  /**
+    Mint tokens to a relayer as a fee reward during a ZK mint. The
+    `_afterTokenTransfer` hook fires normally, inserting the relayer's balance
+    leaf into the tree.
+
+    @param _to The relayer address.
+    @param _amount The fee amount to mint.
+  */
+  function _remintToRelayer (
+    address _to,
+    uint256 _amount
+  ) internal override {
+    _mint(_to, _amount);
+    _totalReminted += _amount;
+  }
+
+  /**
     This is a hook called after any transfer of tokens, including mint or burn.
     In this case, owing to our multiple inheritance, we explicitly opt for the
-    ERC-5805 behavior of `ERC20Votes`.
+    ERC-5805 behavior of `ERC20Votes`. Additionally, we insert balance leaves
+    into the hash tree for every receive, unless suppressed by a remint in
+    progress.
 
     @param _from The address where tokens are transferring from.
     @param _to The address where tokens are transferring to.
@@ -228,6 +323,9 @@ contract Sigil is
     uint256 _amount
   ) internal override(ERC20, ERC20Votes) {
     ERC20Votes._afterTokenTransfer(_from, _to, _amount);
+    if (!_inRemint && _to != address(0)) {
+      _updateBalanceInTree(_to, balanceOf(_to));
+    }
   }
 
   /**

@@ -90,13 +90,13 @@ contract SigilERC4626Test is
 
   /// initialized is false before initialize() is called.
   function test_initialized_startsAsFalse () public {
-    Sigil _newToken = new Sigil(address(this));
+    Sigil _newToken = new Sigil(address(this), address(0), address(token.poseidon2()), 1 days, 100, 1_000_000e18);
     assertFalse(_newToken.initialized());
   }
 
   /// initialize() can only be called by the owner.
   function test_initialize_onlyOwner_reverts () public {
-    Sigil _newToken = new Sigil(address(this));
+    Sigil _newToken = new Sigil(address(this), address(0), address(token.poseidon2()), 1 days, 100, 1_000_000e18);
 
     // Fund WETH for initialization.
     weth.mint(alice, INIT_WETH_AMOUNT);
@@ -111,7 +111,7 @@ contract SigilERC4626Test is
 
   /// initialize() mints all tokens to the recipient.
   function test_initialize_mintsToRecipient () public {
-    Sigil _newToken = new Sigil(address(this));
+    Sigil _newToken = new Sigil(address(this), address(0), address(token.poseidon2()), 1 days, 100, 1_000_000e18);
 
     // Fund WETH for initialization.
     weth.mint(address(this), INIT_WETH_AMOUNT);

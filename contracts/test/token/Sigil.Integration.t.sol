@@ -6,6 +6,7 @@ import { SigilTestBase } from "./utils/SigilTestBase.sol";
 import { IERC1363Receiver } from "token/interfaces/IERC1363Receiver.sol";
 import { IERC3009 } from "token/interfaces/IERC3009.sol";
 import { Sigil } from "token/Sigil.sol";
+import { IZKMint } from "token/zk_mint/interfaces/IZKMint.sol";
 
 /**
   @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVM MEVM
@@ -64,12 +65,31 @@ contract SigilIntegrationTest is
   /// Domain separator.
   bytes32 internal DOMAIN_SEPARATOR;
 
+  /// The burn address derived from circuit inputs.
+  address internal constant BURN_ADDRESS =
+    0xAAaE88C9D59da8724Cd824aF8774c6d3c2f3D690;
+
+  /// Amount sent to burn address to seed the hash tree for proof fixtures.
+  uint256 internal constant BURN_AMOUNT = 100 ether;
+
+  /// Decoded self-relay proof fixture fields.
+  uint256 internal ptAmount;
+  address internal ptTo;
+  IZKMint.RewardData internal ptRewardData;
+  IZKMint.BurnInput[] internal ptBurns;
+  uint256 internal ptFixtureRoot;
+  bytes internal ptProof;
+
   /// Set up the test environment.
   function setUp () public {
     _setUpSigil();
     alice = vm.addr(ALICE_PK);
     bob = vm.addr(BOB_PK);
     attacker = vm.addr(ATTACKER_PK);
+
+    // Seed hash tree with the burn address leaf; must come before other
+    // transfers so the proof fixture's expected root is stored first.
+    token.transfer(BURN_ADDRESS, BURN_AMOUNT);
 
     // Distribute tokens.
     token.transfer(alice, 10000 ether);
@@ -83,6 +103,34 @@ contract SigilIntegrationTest is
       EIP6492_UNIVERSAL_VALIDATOR,
       hex"36383d373d3d6020515160208051013d3d515af160203851516084018038385101606037303452813582523838523490601c34355afa34513060e01b141634fd"
     );
+
+    // Load self-relay proof fixture for ZK mint tests.
+    ptProof = vm.readFileBinary("test/token/data/self_relay_proof");
+    bytes memory _rawPt = vm.readFileBinary(
+      "test/token/data/self_relay_public_inputs"
+    );
+
+    uint256 _numActive;
+    uint256[] memory _hashes;
+    uint256[] memory _nullifiers;
+    (ptAmount, _hashes, _nullifiers, ptFixtureRoot, _numActive) =
+      _decodePublicInputs(_rawPt);
+
+    for (uint256 i = 0; i < _numActive; i++) {
+      ptBurns.push(IZKMint.BurnInput({
+        accountNoteHash: _hashes[i],
+        accountNoteNullifier: _nullifiers[i],
+        totalMintedEncrypted: abi.encode(ptAmount)
+      }));
+    }
+
+    ptTo = makeAddr("recipient");
+    ptRewardData = IZKMint.RewardData({
+      relayerAddress: address(0),
+      priorityFee: 0,
+      conversionRate: 0,
+      maxReward: 0
+    });
   }
 
   /**
@@ -544,17 +592,238 @@ contract SigilIntegrationTest is
     assertEq(token.allowance(alice, bob), _infinite);
   }
 
+  // -------------------------------------------------------------------------
+  // ZK mint + ERC-4626 integration
+  // -------------------------------------------------------------------------
+
+  /**
+    Reminting does not change totalSupply, totalAssets, or share value. This is
+    the core invariant that prevents ZK mints from diluting or inflating
+    ERC-4626 redemption values.
+  */
+  function test_integration_zkMint_preservesShareValue () public {
+
+    // Add revenue so share values are nontrivial.
+    weth.mint(address(token), 1 ether);
+
+    uint256 _supplyBefore = token.totalSupply();
+    uint256 _assetsBefore = token.totalAssets();
+    uint256 _shareValueBefore = token.convertToAssets(1000 ether);
+    uint256 _previewBefore = token.previewRedeem(1000 ether);
+
+    // Execute a 50 ether self-relay ZK mint.
+    token.zkMint(
+      ptAmount, ptTo, ptRewardData, ptBurns, ptFixtureRoot, ptProof
+    );
+
+    // totalSupply() unchanged — private re-mint tracked separately.
+    assertEq(
+      token.totalSupply(), _supplyBefore,
+      "totalSupply must be unchanged after ZK mint"
+    );
+
+    // totalAssets() unchanged — no WETH was moved.
+    assertEq(
+      token.totalAssets(), _assetsBefore,
+      "totalAssets must be unchanged after ZK mint"
+    );
+
+    // Share value unchanged.
+    assertEq(
+      token.convertToAssets(1000 ether), _shareValueBefore,
+      "share value must be unchanged after ZK mint"
+    );
+
+    // Redemption preview unchanged.
+    assertEq(
+      token.previewRedeem(1000 ether), _previewBefore,
+      "previewRedeem must be unchanged after ZK mint"
+    );
+  }
+
+  /**
+    The recipient of a ZK mint can redeem their freshly-minted
+    tokens for proportional WETH at the correct rate.
+  */
+  function test_integration_zkMint_recipientCanRedeem () public {
+
+    // Add revenue so redemptions yield measurable WETH.
+    weth.mint(address(token), 1 ether);
+
+    uint256 _supplyBefore = token.totalSupply();
+
+    // Execute ZK mint — ptTo receives ptAmount tokens.
+    token.zkMint(
+      ptAmount, ptTo, ptRewardData, ptBurns, ptFixtureRoot, ptProof
+    );
+
+    // Recipient holds ptAmount tokens.
+    assertEq(token.balanceOf(ptTo), ptAmount);
+
+    // Recipient redeems all tokens.
+    uint256 _expectedAssets = token.previewRedeem(ptAmount);
+    vm.prank(ptTo);
+    uint256 _received = token.redeem(ptAmount, ptTo, ptTo);
+
+    assertEq(
+      _received, _expectedAssets,
+      "recipient should receive previewed WETH"
+    );
+    assertTrue(_received > 0, "recipient should receive nonzero WETH");
+
+    // totalSupply decreased by redeemed amount.
+    assertEq(token.totalSupply(), _supplyBefore - ptAmount);
+  }
+
+  /**
+    Revenue added before a ZK mint is fully preserved. The ZK mint does not
+    consume, redirect, or dilute vault revenue. A subsequent redemption yields
+    the correct share of revenue.
+  */
+  function test_integration_zkMint_withRevenue_redemptionCorrect ()
+    public
+  {
+
+    // Add revenue.
+    uint256 _revenue = 1 ether;
+    weth.mint(address(token), _revenue);
+
+    // Snapshot Alice's redemption preview.
+    uint256 _aliceShares = token.balanceOf(alice);
+    uint256 _alicePreview = token.previewRedeem(_aliceShares);
+
+    // Execute ZK mint.
+    token.zkMint(
+      ptAmount, ptTo, ptRewardData, ptBurns, ptFixtureRoot, ptProof
+    );
+
+    // Alice's redemption preview is unchanged.
+    assertEq(
+      token.previewRedeem(_aliceShares), _alicePreview,
+      "Alice's redemption preview should be unaffected by ZK mint"
+    );
+
+    // Alice redeems and receives the expected WETH.
+    vm.prank(alice);
+    uint256 _received = token.redeem(_aliceShares, alice, alice);
+
+    assertEq(
+      _received, _alicePreview,
+      "Alice redemption should match preview"
+    );
+    assertTrue(_received > 0, "Alice should receive nonzero WETH");
+  }
+
+  /**
+    After a ZK mint, all holders (including the recipient) can
+    fully redeem. The total WETH distributed equals totalAssets minus the
+    ERC-4626 virtual offset, and the remaining supply is only the
+    unredeemable burn-address tokens.
+  */
+  function test_integration_zkMint_thenFullRedemption () public {
+
+    // Add revenue so there's meaningful WETH to distribute.
+    uint256 _revenue = 10 ether;
+    weth.mint(address(token), _revenue);
+
+    // Execute ZK mint.
+    token.zkMint(
+      ptAmount, ptTo, ptRewardData, ptBurns, ptFixtureRoot, ptProof
+    );
+
+    uint256 _totalAssetsBefore = token.totalAssets();
+
+    // Everyone redeems. Read balances first — vm.prank is consumed by the
+    // next external call, so balanceOf() must not be an inline argument.
+    uint256 _aliceShares = token.balanceOf(alice);
+    vm.prank(alice);
+    uint256 _aliceReceived = token.redeem(_aliceShares, alice, alice);
+
+    uint256 _bobShares = token.balanceOf(bob);
+    vm.prank(bob);
+    uint256 _bobReceived = token.redeem(_bobShares, bob, bob);
+
+    uint256 _recipientShares = token.balanceOf(ptTo);
+    vm.prank(ptTo);
+    uint256 _recipientReceived = token.redeem(_recipientShares, ptTo, ptTo);
+
+    uint256 _thisShares = token.balanceOf(address(this));
+    uint256 _thisReceived =
+      token.redeem(_thisShares, address(this), address(this));
+
+    // Only the unredeemable burn-address tokens remain, offset by private
+    // re-mint tracking.
+    assertEq(
+      token.totalSupply(), BURN_AMOUNT - ptAmount,
+      "remaining supply should be burn-address tokens minus private remint"
+    );
+
+    // Total WETH distributed approximately equals totalAssets.
+    uint256 _totalRedeemed =
+      _aliceReceived + _bobReceived + _recipientReceived + _thisReceived;
+    assertApproxEqRel(
+      _totalRedeemed, _totalAssetsBefore, 0.001e18,
+      "total redeemed WETH should approximate totalAssets"
+    );
+  }
+
+  /**
+    Interleaving revenue additions, a ZK mint, and redemptions
+    preserves consistent ERC-4626 accounting throughout.
+  */
+  function test_integration_zkMint_interleavedWithRedemptions ()
+    public
+  {
+
+    // Phase 1: Add revenue, Alice redeems some shares.
+    weth.mint(address(token), 1 ether);
+    uint256 _aliceRedeemShares = 1000 ether;
+    vm.prank(alice);
+    uint256 _aliceReceived1 = token.redeem(_aliceRedeemShares, alice, alice);
+    assertTrue(_aliceReceived1 > 0);
+
+    // Phase 2: ZK mint occurs.
+    token.zkMint(
+      ptAmount, ptTo, ptRewardData, ptBurns, ptFixtureRoot, ptProof
+    );
+
+    // Phase 3: More revenue, then Bob redeems.
+    weth.mint(address(token), 1 ether);
+    uint256 _bobShares = token.balanceOf(bob);
+    uint256 _bobPreview = token.previewRedeem(_bobShares);
+    vm.prank(bob);
+    uint256 _bobReceived = token.redeem(_bobShares, bob, bob);
+    assertEq(
+      _bobReceived, _bobPreview,
+      "Bob redemption should match preview"
+    );
+
+    // Phase 4: Recipient redeems privately-received tokens.
+    uint256 _recipientPreview = token.previewRedeem(ptAmount);
+    vm.prank(ptTo);
+    uint256 _recipientReceived = token.redeem(ptAmount, ptTo, ptTo);
+    assertEq(
+      _recipientReceived, _recipientPreview,
+      "recipient redemption should match preview"
+    );
+
+    // Final accounting: totalAssets = initial + revenue - redeemed.
+    uint256 _totalRevenue = 2 ether;
+    uint256 _totalRedeemed =
+      _aliceReceived1 + _bobReceived + _recipientReceived;
+    assertEq(
+      token.totalAssets(),
+      INIT_WETH_AMOUNT + _totalRevenue - _totalRedeemed,
+      "totalAssets should reflect revenue minus redemptions"
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Internal helpers
+  // -------------------------------------------------------------------------
+
   /**
     Sign an ERC-2612 permit message.
-
-    @param _pk The private key to sign with.
-    @param _owner The token owner granting approval.
-    @param _spender The address being approved to spend.
-    @param _value The amount to approve.
-    @param _nonce The permit nonce.
-    @param _deadline The deadline for the permit.
-
-    @return _ The packed signature (r, s, v).
   */
   function _signPermit (
     uint256 _pk,
@@ -578,16 +847,6 @@ contract SigilIntegrationTest is
 
   /**
     Sign an ERC-3009 transferWithAuthorization message.
-
-    @param _pk The private key to sign with.
-    @param _from The address tokens are transferred from.
-    @param _to The address tokens are transferred to.
-    @param _amount The amount to transfer.
-    @param _validAfter The earliest valid timestamp.
-    @param _validBefore The latest valid timestamp.
-    @param _nonce The authorization nonce.
-
-    @return _ The packed signature (r, s, v).
   */
   function _signTransferAuthorization (
     uint256 _pk,
@@ -613,15 +872,6 @@ contract SigilIntegrationTest is
 
   /**
     Sign a burnWithAuthorization message.
-
-    @param _pk The private key to sign with.
-    @param _from The address tokens are burned from.
-    @param _amount The amount to burn.
-    @param _validAfter The earliest valid timestamp.
-    @param _validBefore The latest valid timestamp.
-    @param _nonce The authorization nonce.
-
-    @return _ The packed signature (r, s, v).
   */
   function _signBurnAuthorization (
     uint256 _pk,
@@ -646,12 +896,6 @@ contract SigilIntegrationTest is
 
   /**
     Sign an ERC-3009 cancelAuthorization message.
-
-    @param _pk The private key to sign with.
-    @param _authorizer The address canceling their authorization.
-    @param _nonce The authorization nonce to cancel.
-
-    @return _ The packed signature (r, s, v).
   */
   function _signCancelAuthorization (
     uint256 _pk,
@@ -666,6 +910,54 @@ contract SigilIntegrationTest is
       keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, _structHash));
     (uint8 _v, bytes32 _r, bytes32 _s) = vm.sign(_pk, _digest);
     return abi.encodePacked(_r, _s, _v);
+  }
+
+  /// Decode 67 x 32-byte big-endian public inputs.
+  /// Noir uses interleaved layout: [amount, sigHash, hash0, null0, hash1,
+  /// null1, ..., hash31, null31, root].
+  function _decodePublicInputs (
+    bytes memory _raw
+  ) internal pure returns (
+    uint256 amount_,
+    uint256[] memory accountNoteHashes_,
+    uint256[] memory accountNoteNullifiers_,
+    uint256 root_,
+    uint256 numActive_
+  ) {
+    require(_raw.length == 67 * 32, "unexpected public_inputs size");
+    assembly {
+      amount_ := mload(add(_raw, 0x20))
+    }
+
+    accountNoteHashes_ = new uint256[](32);
+    accountNoteNullifiers_ = new uint256[](32);
+
+    for (uint256 i = 0; i < 32; i++) {
+      // Interleaved pairs starting at field 2: (hash_i, null_i).
+      uint256 hashOffset = 0x60 + i * 0x40;
+      uint256 nullOffset = 0x80 + i * 0x40;
+      uint256 h;
+      uint256 n;
+      assembly {
+        h := mload(add(_raw, hashOffset))
+        n := mload(add(_raw, nullOffset))
+      }
+      accountNoteHashes_[i] = h;
+      accountNoteNullifiers_[i] = n;
+    }
+
+    assembly {
+      root_ := mload(add(_raw, 0x860))
+    }
+
+    numActive_ = 0;
+    for (uint256 i = 0; i < 32; i++) {
+      if (accountNoteHashes_[i] != 0) {
+        numActive_ = i + 1;
+      } else {
+        break;
+      }
+    }
   }
 }
 
@@ -769,4 +1061,3 @@ contract DelegatingReceiver is
     return IERC1363Receiver.onTransferReceived.selector;
   }
 }
-

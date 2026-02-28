@@ -1,0 +1,19 @@
+[package]
+name = "zk_mint"
+type = "bin"
+authors = [
+  "Jimjim Valkema <jimjim.eth>",
+  "Tim Clancy <tim-clancy.eth>"
+]
+license = "LicenseRef-VPL WITH AGPL-3.0-only"
+compiler_version = "1.0.0"
+entry = "src/main.nr"
+description = "A circuit to prove a burn for later zero-knowledge minting."
+
+[dependencies]
+poseidon = { tag = "v0.1.1", git = "https://github.com/noir-lang/poseidon" }
+
+[dependencies.binary_merkle_root]
+git = "https://github.com/privacy-scaling-explorations/zk-kit.noir"
+tag = "binary-merkle-root-v0.0.1"
+directory = "packages/binary-merkle-root"

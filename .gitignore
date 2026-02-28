@@ -4,8 +4,11 @@
 # Build artifacts.
 out/
 cache/
+corpus/
+target/
 dependencies/
 broadcast/
+Prover.toml
 
 # Editor artifacts.
 .claude/

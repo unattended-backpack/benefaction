@@ -451,7 +451,7 @@ contract SigilERC5805Test is
 
     // ERC5805DelegateInvalidSignature()
     vm.expectRevert(bytes4(0x1838d95c));
-    token.delegateBySig(bob, 0, _expiry, _v, bytes32(uint256(_r) + 1), _s);
+    token.delegateBySig(bob, 0, _expiry, _v, bytes32(0), _s);
   }
 
   /// delegateBySig with corrupted s does not delegate for Alice.
